@@ -91,6 +91,8 @@ erDiagram
 
 ## Functional Behaviour
 
+- Authentication defaults to SSO (`AUTH_MODE=sso`) with role checks retained in the `users` table
+- SSO users are provisioned on first login (non-admin by default) and then controlled via local granular access
 - RUREF validation: exactly 11 numeric characters
 - Period validation: strict `YYYYMM` with valid month
 - Search supports:
@@ -189,6 +191,8 @@ source .env
 set +a
 ```
 
+For local development, `AUTH_MODE=local` in `.env.example` enables username/password login.
+
 7. Start the app:
 
 ```bash
@@ -230,6 +234,17 @@ Environment behavior:
 
 - `APP_ENV=dev|development|local|test`: uses `db.create_all()` and seeds local survey/test-user data.
 - Any other `APP_ENV` value: runs `alembic upgrade head` at startup and does not auto-seed local test users.
+
+Authentication behavior:
+
+- `AUTH_MODE=sso` (default):
+	- Login uses trusted upstream SSO headers.
+	- Default headers expected:
+		- `X-Forwarded-User` (required identity)
+		- `X-Forwarded-Name` (optional display name)
+	- Missing local users are auto-provisioned unless `SSO_AUTO_PROVISION=false`.
+- `AUTH_MODE=local`:
+	- Uses the local username/password login form (useful for local dev and testing).
 
 Create a new migration:
 

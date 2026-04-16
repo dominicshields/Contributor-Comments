@@ -36,6 +36,10 @@ def create_app() -> Flask:
         "DATABASE_URL", "postgresql+psycopg://postgres:postgres@localhost:5432/contributor_comments"
     )
     app.config["APP_ENV"] = os.getenv("APP_ENV", "dev").lower()
+    app.config["AUTH_MODE"] = os.getenv("AUTH_MODE", "sso").lower()
+    app.config["SSO_HEADER_USERNAME"] = os.getenv("SSO_HEADER_USERNAME", "X-Forwarded-User")
+    app.config["SSO_HEADER_FULL_NAME"] = os.getenv("SSO_HEADER_FULL_NAME", "X-Forwarded-Name")
+    app.config["SSO_AUTO_PROVISION"] = os.getenv("SSO_AUTO_PROVISION", "true").lower() == "true"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["DESIGN_SYSTEM_STYLESHEET"] = "design-system/v1/contributor-ons.css"
 
@@ -62,6 +66,7 @@ def create_app() -> Flask:
     def inject_design_system_css_url() -> dict[str, str]:
         return {
             "design_system_css_url": url_for("static", filename=app.config["DESIGN_SYSTEM_STYLESHEET"]),
+            "auth_mode": app.config["AUTH_MODE"],
         }
 
     @app.template_filter("uk_datetime")

@@ -19,6 +19,7 @@ from app.models import User
 @pytest.fixture()
 def app(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "sqlite:///:memory:")
+    monkeypatch.setenv("AUTH_MODE", "local")
     app = create_app()
     app.config["TESTING"] = True
     app.config["WTF_CSRF_ENABLED"] = False

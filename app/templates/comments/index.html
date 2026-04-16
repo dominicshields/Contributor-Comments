@@ -30,13 +30,44 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Surveys</label>
-                    <div class="ons-checkbox-grid">
-                        {% for survey in surveys %}
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="surveys" value="{{ survey.code }}" id="survey-{{ survey.code }}" {% if survey.code in selected_surveys %}checked{% endif %}>
-                            <label class="form-check-label" for="survey-{{ survey.code }}">{{ survey.code }}</label>
+                    <div class="survey-picker" data-survey-picker>
+                        <button
+                            class="btn btn-outline-secondary w-100 d-flex justify-content-between align-items-center"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#survey-picker-panel"
+                            aria-expanded="false"
+                            aria-controls="survey-picker-panel"
+                        >
+                            <span>Choose surveys</span>
+                            <span class="badge text-bg-secondary" data-survey-selected-count>{{ selected_surveys|length }} selected</span>
+                        </button>
+
+                        <div class="collapse mt-2" id="survey-picker-panel">
+                            <div class="survey-picker-panel">
+                                <div class="d-flex gap-2 mb-2">
+                                    <button class="btn btn-sm btn-outline-primary" type="button" data-select-all-surveys>Select all</button>
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" data-clear-all-surveys>Clear</button>
+                                </div>
+
+                                <input
+                                    class="form-control form-control-sm mb-2"
+                                    type="text"
+                                    placeholder="Filter survey codes"
+                                    aria-label="Filter survey codes"
+                                    data-survey-filter
+                                >
+
+                                <div class="survey-picker-list" data-survey-list>
+                                    {% for survey in surveys %}
+                                    <div class="form-check" data-survey-item>
+                                        <input class="form-check-input" type="checkbox" name="surveys" value="{{ survey.code }}" id="survey-{{ survey.code }}" {% if survey.code in selected_surveys %}checked{% endif %} data-survey-checkbox>
+                                        <label class="form-check-label" for="survey-{{ survey.code }}">{{ survey.code }}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
                         </div>
-                        {% endfor %}
                     </div>
                 </div>
                 <div class="col-12">
@@ -126,4 +157,68 @@
         </div>
     </div>
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const picker = document.querySelector('[data-survey-picker]');
+    if (!picker) {
+        return;
+    }
+
+    const filterInput = picker.querySelector('[data-survey-filter]');
+    const selectAllButton = picker.querySelector('[data-select-all-surveys]');
+    const clearAllButton = picker.querySelector('[data-clear-all-surveys]');
+    const checkboxes = Array.from(picker.querySelectorAll('[data-survey-checkbox]'));
+    const items = Array.from(picker.querySelectorAll('[data-survey-item]'));
+    const countBadge = picker.querySelector('[data-survey-selected-count]');
+
+    function updateCount() {
+        const selectedCount = checkboxes.filter(function (checkbox) {
+            return checkbox.checked;
+        }).length;
+        countBadge.textContent = selectedCount + ' selected';
+    }
+
+    function visibleItems() {
+        return items.filter(function (item) {
+            return item.style.display !== 'none';
+        });
+    }
+
+    filterInput.addEventListener('input', function () {
+        const query = filterInput.value.trim().toLowerCase();
+        items.forEach(function (item) {
+            const label = item.querySelector('label');
+            const text = label ? label.textContent.toLowerCase() : '';
+            item.style.display = text.includes(query) ? '' : 'none';
+        });
+    });
+
+    selectAllButton.addEventListener('click', function () {
+        visibleItems().forEach(function (item) {
+            const checkbox = item.querySelector('[data-survey-checkbox]');
+            if (checkbox) {
+                checkbox.checked = true;
+            }
+        });
+        updateCount();
+    });
+
+    clearAllButton.addEventListener('click', function () {
+        checkboxes.forEach(function (checkbox) {
+            checkbox.checked = false;
+        });
+        updateCount();
+    });
+
+    checkboxes.forEach(function (checkbox) {
+        checkbox.addEventListener('change', updateCount);
+    });
+
+    updateCount();
+});
+</script>
 {% endblock %}

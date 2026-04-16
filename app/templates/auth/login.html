@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Login | Contributor Comments{% endblock %}
+
+{% block content %}
+<header class="ons-page-header">
+    <h1 class="ons-page-title">Contributor Comments Login</h1>
+    <p class="ons-page-lead">Use your account credentials to access and maintain comment records.</p>
+</header>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="ons-panel">
+            <form method="post">
+                <div class="mb-3">
+                    <label class="form-label" for="username">Username</label>
+                    <input class="form-control" type="text" id="username" name="username" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="password">Password</label>
+                    <input class="form-control" type="password" id="password" name="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Sign In</button>
+            </form>
+            <hr>
+            <p class="mb-0"><strong>Seeded test users:</strong> admin, analyst1, analyst2 (password: Password123!).</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}Contributor Comments{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ design_system_css_url }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+<a class="ons-skip-link" href="#main-content">Skip to main content</a>
+
+<div class="ons-phase-banner" role="region" aria-label="Service phase">
+    <div class="container">
+        <span class="ons-phase-tag">BETA</span>
+        <span>New service for contributor comment capture and retrieval.</span>
+    </div>
+</div>
+
+<nav class="navbar navbar-expand-lg ons-site-header" aria-label="Main navigation">
+    <div class="container-lg">
+        <a class="navbar-brand" href="{{ url_for('comments.index') }}">Contributor Comments</a>
+        {% if current_user.is_authenticated %}
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('comments.index') }}">Search and Add</a>
+                </li>
+                {% if current_user.is_admin %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin.surveys') }}">Admin Surveys</a>
+                </li>
+                {% endif %}
+            </ul>
+            <span class="navbar-text me-3">{{ current_user.full_name }} ({{ current_user.username }})</span>
+            <form action="{{ url_for('auth.logout') }}" method="post" class="d-inline">
+                <button class="btn btn-outline-light btn-sm" type="submit">Logout</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</nav>
+
+<main id="main-content" class="ons-main" tabindex="-1">
+    <div class="container-lg">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        {% set alert_class = 'danger' if category == 'error' else category %}
+        <div class="alert alert-{{ alert_class }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+    if (!tokenMeta || !tokenMeta.content) {
+        return;
+    }
+
+    const csrfToken = tokenMeta.content;
+    const forms = document.querySelectorAll('form[method="post"], form[method="POST"]');
+
+    forms.forEach(function (form) {
+        if (form.querySelector('input[name="csrf_token"]')) {
+            return;
+        }
+
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'csrf_token';
+        input.value = csrfToken;
+        form.appendChild(input);
+    });
+
+    const triggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    triggerList.forEach(function (triggerEl) {
+        new bootstrap.Tooltip(triggerEl);
+    });
+});
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

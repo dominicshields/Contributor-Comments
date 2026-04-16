@@ -1,0 +1,87 @@
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+from alembic import command
+from alembic.config import Config
+from flask import Flask, redirect, url_for
+from flask_login import current_user
+
+from .extensions import csrf, db, login_manager
+from .models import User
+from .seed import seed_reference_data
+
+
+LOCAL_ENVS = {"dev", "development", "local", "test"}
+
+
+def _run_alembic_upgrade(database_url: str) -> None:
+    project_root = Path(__file__).resolve().parent.parent
+    alembic_ini = project_root / "alembic.ini"
+    config = Config(str(alembic_ini))
+    config.set_main_option("sqlalchemy.url", database_url)
+    command.upgrade(config, "head")
+
+
+def create_app() -> Flask:
+    app = Flask(__name__, instance_relative_config=True)
+
+    os.makedirs(app.instance_path, exist_ok=True)
+
+    app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key")
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
+        "DATABASE_URL", "postgresql+psycopg://postgres:postgres@localhost:5432/contributor_comments"
+    )
+    app.config["APP_ENV"] = os.getenv("APP_ENV", "dev").lower()
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["DESIGN_SYSTEM_STYLESHEET"] = "design-system/v1/contributor-ons.css"
+
+    db.init_app(app)
+    login_manager.init_app(app)
+    csrf.init_app(app)
+    login_manager.login_view = "auth.login"
+
+    from .routes.admin import bp as admin_bp
+    from .routes.auth import bp as auth_bp
+    from .routes.comments import bp as comments_bp
+
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(comments_bp)
+    app.register_blueprint(admin_bp)
+
+    @app.get("/")
+    def home():
+        if current_user.is_authenticated:
+            return redirect(url_for("comments.index"))
+        return redirect(url_for("auth.login"))
+
+    @app.context_processor
+    def inject_design_system_css_url() -> dict[str, str]:
+        return {
+            "design_system_css_url": url_for("static", filename=app.config["DESIGN_SYSTEM_STYLESHEET"]),
+        }
+
+    @app.template_filter("uk_datetime")
+    def uk_datetime_filter(value: datetime | None) -> str:
+        if value is None:
+            return ""
+
+        london = ZoneInfo("Europe/London")
+        return value.astimezone(london).strftime("%d %b %Y %H:%M")
+
+    with app.app_context():
+        if app.config["APP_ENV"] in LOCAL_ENVS:
+            db.create_all()
+            seed_reference_data()
+        else:
+            _run_alembic_upgrade(app.config["SQLALCHEMY_DATABASE_URI"])
+
+    return app
+
+
+@login_manager.user_loader
+def load_user(user_id: str) -> User | None:
+    return db.session.get(User, int(user_id))

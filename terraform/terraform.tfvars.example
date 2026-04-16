@@ -1,0 +1,5 @@
+account_id             = "123456789012"
+vpc_id                 = "vpc-xxxxxxxx"
+app_security_group_id  = "sg-xxxxxxxx"
+db_subnet_ids          = ["subnet-aaaa", "subnet-bbbb"]
+db_password            = "replace-me"

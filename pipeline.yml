@@ -1,0 +1,109 @@
+resource_types:
+  - name: registry-image
+    type: registry-image
+    source:
+      repository: concourse/registry-image-resource
+
+resources:
+  - name: contributor-comments-repo
+    type: git
+    source:
+      uri: ((git_repo_uri))
+      branch: main
+      private_key: ((git_private_key))
+
+  - name: app-image
+    type: registry-image
+    source:
+      repository: ((docker_repository))
+      username: ((docker_username))
+      password: ((docker_password))
+
+jobs:
+  - name: test
+    public: true
+    plan:
+      - get: contributor-comments-repo
+        trigger: true
+      - task: run-tests
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: python
+              tag: "3.12"
+          inputs:
+            - name: contributor-comments-repo
+          run:
+            path: sh
+            args:
+              - -exc
+              - |
+                cd contributor-comments-repo
+                python -m venv .venv
+                . .venv/bin/activate
+                pip install --upgrade pip
+                pip install -r requirements.txt
+                python -m compileall app run.py
+
+  - name: build-image
+    public: true
+    plan:
+      - get: contributor-comments-repo
+        passed: [test]
+        trigger: true
+      - put: app-image
+        params:
+          build: contributor-comments-repo
+
+  - name: terraform-plan
+    public: true
+    plan:
+      - get: contributor-comments-repo
+        passed: [test]
+        trigger: true
+      - task: tf-plan
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: hashicorp/terraform
+              tag: "1.9"
+          inputs:
+            - name: contributor-comments-repo
+          run:
+            path: sh
+            args:
+              - -exc
+              - |
+                cd contributor-comments-repo/terraform
+                terraform init -input=false
+                terraform validate
+                terraform plan -out=tfplan
+
+  - name: terraform-apply
+    public: false
+    plan:
+      - get: contributor-comments-repo
+        passed: [terraform-plan]
+        trigger: false
+      - task: tf-apply
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: hashicorp/terraform
+              tag: "1.9"
+          inputs:
+            - name: contributor-comments-repo
+          run:
+            path: sh
+            args:
+              - -exc
+              - |
+                cd contributor-comments-repo/terraform
+                terraform init -input=false
+                terraform apply -auto-approve

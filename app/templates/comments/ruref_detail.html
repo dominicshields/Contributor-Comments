@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}RUREF {{ ruref }} | Contributor Comments{% endblock %}
+
+{% block content %}
+<header class="ons-page-header">
+    <h1 class="ons-page-title">Reporting Unit Reference {{ ruref }}</h1>
+    <p class="ons-page-lead">Comments grouped by survey in survey order, with period descending.</p>
+</header>
+
+<div class="ons-panel mb-4">
+    <h2 class="ons-section-title">Filter This RUREF</h2>
+    <form class="row g-3" method="get" action="{{ url_for('comments.ruref_detail', ruref=ruref) }}">
+        <div class="col-md-7">
+            <label class="form-label" for="q">Comment Full Text</label>
+            <input class="form-control" type="text" id="q" name="q" value="{{ q }}">
+        </div>
+        <div class="col-md-5">
+            <label class="form-label">Surveys</label>
+            <div class="ons-checkbox-grid">
+                {% for survey in surveys %}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="surveys" value="{{ survey.code }}" id="ruref-survey-{{ survey.code }}" {% if survey.code in selected_surveys %}checked{% endif %}>
+                    <label class="form-check-label" for="ruref-survey-{{ survey.code }}">{{ survey.code }}</label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col-12">
+            <button class="btn btn-primary" type="submit">Apply Filters</button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('comments.ruref_detail', ruref=ruref) }}">Clear</a>
+        </div>
+    </form>
+</div>
+
+{% if grouped_comments %}
+    {% for survey_code, survey_comments in grouped_comments.items() %}
+    <section class="ons-panel mb-4">
+        <h2 class="ons-section-title">Survey {{ survey_code }}</h2>
+        {% for comment in survey_comments %}
+        <article class="comment-card">
+            <p class="comment-period"><strong>{{ comment.period }}</strong></p>
+            <p class="comment-body">{{ comment.comment_text }}</p>
+            <p class="comment-meta">
+                <span data-bs-toggle="tooltip" title="Created {{ comment.created_at | uk_datetime }} UTC->UK">{{ comment.author.full_name }}</span>
+                <a class="ms-2" href="{{ url_for('comments.edit_comment', comment_id=comment.id) }}">Edit</a>
+            </p>
+        </article>
+        {% endfor %}
+    </section>
+    {% endfor %}
+{% else %}
+    <div class="ons-panel">
+        <p class="mb-0">No comments found for this RUREF and filters.</p>
+    </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Edit Comment | Contributor Comments{% endblock %}
+
+{% block content %}
+<header class="ons-page-header">
+    <h1 class="ons-page-title">Edit Comment</h1>
+    <p class="ons-page-lead">Updates are tracked in edit history with editor and timestamp.</p>
+</header>
+
+<div class="ons-panel mb-4">
+    <p><strong>RUREF:</strong> {{ comment.ruref }}</p>
+    <p><strong>Survey:</strong> {{ comment.survey_code }}</p>
+    <p><strong>Period:</strong> {{ comment.period }}</p>
+    <form method="post">
+        <div class="mb-3">
+            <label class="form-label" for="comment">Comment Text</label>
+            <textarea class="form-control" name="comment" id="comment" rows="6" required>{{ comment.comment_text }}</textarea>
+        </div>
+        <button class="btn btn-primary" type="submit">Save Changes</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('comments.ruref_detail', ruref=comment.ruref) }}">Cancel</a>
+    </form>
+</div>
+
+<div class="ons-panel">
+    <h2 class="ons-section-title">Edit History</h2>
+    {% if comment.edit_history %}
+    <div class="table-responsive">
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Edited At (UK)</th>
+                    <th>Editor</th>
+                    <th>Previous Text</th>
+                    <th>New Text</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for edit in comment.edit_history %}
+                <tr>
+                    <td>{{ edit.edited_at | uk_datetime }}</td>
+                    <td>{{ edit.editor.full_name }}</td>
+                    <td>{{ edit.previous_text }}</td>
+                    <td>{{ edit.new_text }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="mb-0">No edits recorded yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

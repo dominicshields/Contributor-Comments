@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Search and Add | Contributor Comments{% endblock %}
+
+{% block content %}
+<header class="ons-page-header">
+    <p class="ons-page-lead">Search comments by RU reference, survey, and text. Add new comments below.</p>
+</header>
+
+<ul class="nav nav-tabs mb-3" id="commentsTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="search-tab" data-bs-toggle="tab" data-bs-target="#search-tab-pane" type="button" role="tab" aria-controls="search-tab-pane" aria-selected="true">Search</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="add-tab" data-bs-toggle="tab" data-bs-target="#add-tab-pane" type="button" role="tab" aria-controls="add-tab-pane" aria-selected="false">Add Comment</button>
+    </li>
+</ul>
+
+<div class="tab-content" id="commentsTabsContent">
+    <div class="tab-pane fade show active" id="search-tab-pane" role="tabpanel" aria-labelledby="search-tab" tabindex="0">
+        <div class="ons-panel mb-4">
+            <h2 class="ons-section-title">Search</h2>
+            <form class="row g-3" method="get" action="{{ url_for('comments.index') }}">
+                <div class="col-md-4">
+                    <label class="form-label" for="ruref">RUREF (11 digits)</label>
+                    <input class="form-control" type="text" id="ruref" name="ruref" value="{{ ruref }}" maxlength="11">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="q">Comment Full Text</label>
+                    <input class="form-control" type="text" id="q" name="q" value="{{ q }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Surveys</label>
+                    <div class="ons-checkbox-grid">
+                        {% for survey in surveys %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="surveys" value="{{ survey.code }}" id="survey-{{ survey.code }}" {% if survey.code in selected_surveys %}checked{% endif %}>
+                            <label class="form-check-label" for="survey-{{ survey.code }}">{{ survey.code }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-primary" type="submit">Run Search</button>
+                </div>
+            </form>
+        </div>
+
+        {% if search_performed %}
+        <div class="ons-panel">
+            <h2 class="ons-section-title">Search Results</h2>
+            {% if grouped_results %}
+                {% for survey_code, survey_comments in grouped_results.items() %}
+                <h3 class="h5 mt-3">Survey {{ survey_code }}</h3>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle search-results-table">
+                        <colgroup>
+                            <col class="col-period">
+                            <col class="col-ruref">
+                            <col class="col-comment">
+                            <col class="col-author">
+                            <col class="col-action">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>Period</th>
+                                <th>RUREF</th>
+                                <th>Comment</th>
+                                <th>Author</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for comment in survey_comments %}
+                            <tr>
+                                <td>{{ comment.period }}</td>
+                                <td>{{ comment.ruref }}</td>
+                                <td>{{ comment.comment_text }}</td>
+                                <td>
+                                    <span data-bs-toggle="tooltip" title="{{ comment.created_at | uk_datetime }}">{{ comment.author.full_name }}</span>
+                                </td>
+                                <td><a href="{{ url_for('comments.ruref_detail', ruref=comment.ruref) }}">View RUREF</a></td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="mb-0">No results found for this search.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="tab-pane fade" id="add-tab-pane" role="tabpanel" aria-labelledby="add-tab" tabindex="0">
+        <div class="ons-panel mb-4">
+            <h2 class="ons-section-title">Add Comment</h2>
+            <form method="post" action="{{ url_for('comments.create_comment') }}">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label" for="new-ruref">RUREF</label>
+                        <input class="form-control" type="text" id="new-ruref" name="ruref" maxlength="11" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="new-survey">Survey</label>
+                        <select class="form-select" id="new-survey" name="survey" required>
+                            <option value="">Select survey</option>
+                            {% for survey in surveys %}
+                            <option value="{{ survey.code }}">{{ survey.code }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="new-period">Period (YYYYMM)</label>
+                        <input class="form-control" type="text" id="new-period" name="period" maxlength="6" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="new-comment">Comment</label>
+                        <textarea class="form-control" id="new-comment" name="comment" rows="4" required></textarea>
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-primary" type="submit">Save Comment</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

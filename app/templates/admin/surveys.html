@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Admin Surveys | Contributor Comments{% endblock %}
+
+{% block content %}
+<header class="ons-page-header">
+    <h1 class="ons-page-title">Survey Metadata</h1>
+    <p class="ons-page-lead">Maintain the survey list used by comment capture and search.</p>
+</header>
+
+<div class="ons-panel mb-4">
+    <h2 class="ons-section-title">Add Survey</h2>
+    <form method="post" action="{{ url_for('admin.add_survey') }}" class="row g-3">
+        <div class="col-md-4">
+            <label class="form-label" for="code">Survey Code (3 digits)</label>
+            <input class="form-control" type="text" name="code" id="code" maxlength="3" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label" for="description">Description</label>
+            <input class="form-control" type="text" name="description" id="description" maxlength="255" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label" for="forms_per_period">Forms Per Period</label>
+            <input class="form-control" type="number" name="forms_per_period" id="forms_per_period" min="0" step="1" value="0" required>
+        </div>
+        <div class="col-12">
+            <button class="btn btn-primary" type="submit">Add</button>
+        </div>
+    </form>
+</div>
+
+<div class="ons-panel">
+    <h2 class="ons-section-title">Current Surveys</h2>
+    <div class="table-responsive">
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Description</th>
+                    <th>Forms Per Period</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for survey in surveys %}
+                <tr>
+                    <td>{{ survey.code }}</td>
+                    <td>{{ survey.description }}</td>
+                    <td>{{ survey.forms_per_period }}</td>
+                    <td>
+                        {% if survey.is_active %}
+                        <span class="badge text-bg-success">Active</span>
+                        {% else %}
+                        <span class="badge text-bg-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="post" action="{{ url_for('admin.update_survey_metadata', code=survey.code) }}" class="d-inline-flex gap-2 align-items-center mb-1">
+                            <input
+                                class="form-control form-control-sm"
+                                type="text"
+                                name="description"
+                                maxlength="255"
+                                value="{{ survey.description }}"
+                                required
+                            >
+                            <input
+                                class="form-control form-control-sm"
+                                type="number"
+                                name="forms_per_period"
+                                min="0"
+                                step="1"
+                                value="{{ survey.forms_per_period }}"
+                                required
+                            >
+                            <button class="btn btn-sm btn-outline-secondary" type="submit">Save</button>
+                        </form>
+                        <form method="post" action="{{ url_for('admin.toggle_survey_active', code=survey.code) }}" class="d-inline">
+                            {% if survey.is_active %}
+                            <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
+                            {% else %}
+                            <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
+                            {% endif %}
+                        </form>
+                        <form method="post" action="{{ url_for('admin.delete_survey', code=survey.code) }}" class="d-inline" onsubmit="return confirm('Delete survey {{ survey.code }} and all related comments? This cannot be undone.');">
+                            <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

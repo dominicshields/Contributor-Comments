@@ -35,6 +35,60 @@ Contributor Comments is a Flask + Jinja application for capturing and searching 
 - `users`
 	- App login users (author/editor identity source)
 
+## ER Diagram
+
+```mermaid
+erDiagram
+	USERS {
+		int id PK
+		string username
+		string full_name
+		string password_hash
+		boolean is_admin
+		datetime created_at
+	}
+
+	REPORTING_UNITS {
+		string ruref PK
+		datetime created_at
+	}
+
+	SURVEYS {
+		string code PK
+		int display_order
+		string description
+		int forms_per_period
+		boolean is_active
+		datetime created_at
+	}
+
+	COMMENTS {
+		int id PK
+		string ruref FK
+		string survey_code FK
+		string period
+		text comment_text
+		int author_id FK
+		datetime created_at
+		datetime updated_at
+	}
+
+	COMMENT_EDITS {
+		int id PK
+		int comment_id FK
+		int editor_id FK
+		datetime edited_at
+		text previous_text
+		text new_text
+	}
+
+	REPORTING_UNITS ||--o{ COMMENTS : has
+	SURVEYS ||--o{ COMMENTS : categorises
+	USERS ||--o{ COMMENTS : authors
+	COMMENTS ||--o{ COMMENT_EDITS : tracks
+	USERS ||--o{ COMMENT_EDITS : edits
+```
+
 ## Functional Behaviour
 
 - RUREF validation: exactly 11 numeric characters

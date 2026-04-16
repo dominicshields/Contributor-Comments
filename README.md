@@ -218,3 +218,59 @@ pytest
 
 - The app is currently PostgreSQL-first by design.
 - Code structure keeps data access and route layers separated to support future DynamoDB adapter work with limited refactoring.
+
+## Estimated AWS Monthly Costs (500 Users, 10 Comments Per User Per Day)
+
+These are planning estimates, not quotes. Use AWS Pricing Calculator before procurement.
+
+### Assumptions Used
+
+- Activity volume:
+	- `500 users * 10 comments/day = 5,000 comments/day`
+	- `~150,000 new comments/month`
+- Read activity for estimate:
+	- `~1,500,000 comment-read operations/month` (moderate search usage assumption)
+- Average comment item size (with metadata): `~1-2 KB`
+- Region pricing varies; ranges below are representative for a UK/EU region.
+- Costs below focus on the database layer only (not app containers/EC2, ALB, NAT, CloudWatch, etc.).
+
+### Option 1: PostgreSQL (RDS, current approach)
+
+Typical small production-like baseline (Single-AZ):
+
+- RDS instance (`db.t4g.micro` to `db.t4g.small`): `~$15-$45/month`
+- Storage (`20-50 GB` gp3): `~$2-$6/month`
+- Backup/storage overhead: `~$0-$5/month`
+
+Estimated monthly database total:
+
+- **`~$20-$56/month`** (Single-AZ)
+
+If you require Multi-AZ for higher resilience, a practical range is:
+
+- **`~$80-$180/month`** (depending on class/storage/backup profile)
+
+### Option 2: DynamoDB (on-demand)
+
+For the same workload, with on-demand capacity:
+
+- Writes (`~150k/month`): `~$0.20-$0.35/month`
+- Reads (`~1.5M/month`): `~$0.25-$0.60/month`
+- Table storage (`~1-5 GB` active): `~$0.30-$1.60/month`
+- Optional PITR backup: `~$0.20-$1.50/month`
+
+Estimated monthly database total:
+
+- **`~$1-$4/month`** (on-demand, moderate read profile)
+
+### Quick Comparison
+
+- PostgreSQL (RDS Single-AZ): **`~$20-$56/month`**
+- PostgreSQL (RDS Multi-AZ): **`~$80-$180/month`**
+- DynamoDB (on-demand): **`~$1-$4/month`**
+
+### Important Caveats
+
+- DynamoDB costs can increase with very heavy query/read patterns, larger item sizes, or GSIs.
+- PostgreSQL costs are largely fixed by instance size, so low-volume and medium-volume workloads can cost similar amounts.
+- Total platform cost is usually dominated by compute/network/security components, not just database costs.

@@ -120,9 +120,22 @@ Local and dev startup runs:
 ## Getting started for Devs
 ## Local Run
 
-### Conda (optional)
+### Conda + uv (recommended if you must use conda)
 
-If you're using conda instead of a `.venv`, create/activate your env and install dependencies:
+Run these commands from the repo root:
+
+```bash
+conda activate work
+uv pip install -r requirements.txt
+cp .env.example .env
+set -a && source .env && set +a
+uv run -- python -m alembic upgrade head
+uv run -- python run.py
+```
+
+### Conda (setup)
+
+If you don't have the `work` conda env yet:
 
 ```bash
 conda install -n work -y python=3.13.5 uv=0.9.26

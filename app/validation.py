@@ -6,6 +6,28 @@ from datetime import datetime, timezone
 ALLOWED_SURVEY_PERIODICITIES = {"Annual", "Quarterly", "Monthly", "Other"}
 
 
+def month_allowed_for_periodicity(survey_code: str, periodicity: str, month: int) -> bool:
+    # Explicit business exception for survey 141.
+    if survey_code == "141":
+        return month == 4
+
+    if periodicity == "Monthly":
+        return 1 <= month <= 12
+    if periodicity == "Quarterly":
+        return month in {3, 6, 9, 12}
+    if periodicity in {"Annual", "Other"}:
+        return month == 12
+    return False
+
+
+def is_period_allowed_for_survey(survey_code: str, periodicity: str, period: str) -> bool:
+    if not is_valid_period(period):
+        return False
+
+    month = int(period[4:6])
+    return month_allowed_for_periodicity(survey_code, periodicity, month)
+
+
 def is_valid_ruref(value: str) -> bool:
     return len(value) == 11 and value.isdigit()
 

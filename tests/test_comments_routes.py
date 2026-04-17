@@ -18,6 +18,50 @@ def test_create_comment_rejects_invalid_period(client, login_analyst):
     assert b"Period must be in YYYYMM format" in response.data
 
 
+def test_create_comment_rejects_period_not_matching_survey_periodicity(client, login_admin, app):
+    with app.app_context():
+        survey = db.session.get(Survey, "221")
+        assert survey is not None
+        survey.periodicity = "Annual"
+        db.session.commit()
+
+    response = client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678901",
+            "survey": "221",
+            "period": "202611",
+            "comment": "invalid month for annual survey",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Period month must match the selected survey periodicity." in response.data
+
+
+def test_create_comment_accepts_period_matching_survey_periodicity(client, login_admin, app):
+    with app.app_context():
+        survey = db.session.get(Survey, "221")
+        assert survey is not None
+        survey.periodicity = "Quarterly"
+        db.session.commit()
+
+    response = client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678901",
+            "survey": "221",
+            "period": "202612",
+            "comment": "valid quarter month",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Comment saved." in response.data
+
+
 def test_create_and_search_comment_by_ruref(client, login_analyst, app):
     client.post(
         "/comments/new",

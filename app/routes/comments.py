@@ -8,7 +8,7 @@ from sqlalchemy import distinct, or_
 
 from ..extensions import db
 from ..models import Comment, CommentEdit, ReportingUnit, Survey, User
-from ..validation import is_valid_period, is_valid_ruref
+from ..validation import is_period_allowed_for_survey, is_valid_period, is_valid_ruref
 
 
 bp = Blueprint("comments", __name__)
@@ -157,6 +157,9 @@ def create_comment():
     survey = db.session.get(Survey, survey_code)
     if survey is None or not survey.is_active:
         flash("Survey must be selected from the configured survey list.", "error")
+        valid = False
+    elif not is_period_allowed_for_survey(survey.code, survey.periodicity, period):
+        flash("Period month must match the selected survey periodicity.", "error")
         valid = False
 
     if not comment_text:

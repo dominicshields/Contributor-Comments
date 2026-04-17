@@ -167,6 +167,36 @@ Local and dev startup runs:
 ## Getting started for Devs
 ## Local Run
 
+### Conda + uv (recommended if you must use conda)
+
+Run these commands from the repo root:
+
+```bash
+conda activate work
+uv pip install -r requirements.txt
+cp .env.example .env
+set -a && source .env && set +a
+uv run -- python -m alembic upgrade head
+uv run -- python run.py
+```
+
+### Conda (setup)
+
+If you don't have the `work` conda env yet:
+
+```bash
+conda install -n work -y python=3.13.5 uv=0.9.26
+conda activate work
+conda install postgresql
+
+# install app dependencies into the active conda env
+pip install -r requirements.txt
+
+# (optional) initialise and start a local postgres instance
+initdb -D ~/postgres-data
+pg_ctl -D ~/postgres-data -l logfile start
+```
+
 1. Clone and enter the project:
 
 ```bash
@@ -209,9 +239,8 @@ pip install -r requirements.txt
 5. Start PostgreSQL locally and create a database owned by the `postgres` role:
 
 ```bash
-sudo -u postgres psql
+psql -d postgres -U $(whoami)
 ```
-
 Then run the following in the `psql` prompt:
 
 ```sql
@@ -289,7 +318,7 @@ uv run alembic upgrade head
 Alternative:
 
 ```bash
-alembic upgrade head
+python -m alembic upgrade head
 ```
 
 Environment behavior:
@@ -333,6 +362,13 @@ Alternative:
 ```bash
 pytest
 ```
+
+## Troubleshooting
+
+- If you see `ModuleNotFoundError: No module named 'alembic'` when starting the app, install dependencies for the environment you're using:
+	- `.venv`: `uv pip install -r requirements.txt`
+	- conda: `pip install -r requirements.txt`
+- If `uv run alembic upgrade head` fails with `Failed to spawn: alembic`, it usually means Alembic isn't installed in that environment (same fix as above).
 
 ## Infrastructure Scaffolding
 

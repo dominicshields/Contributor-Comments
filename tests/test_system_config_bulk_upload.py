@@ -12,6 +12,7 @@ def test_system_config_menu_includes_bulk_upload_for_admin(client, login_admin):
     assert response.status_code == 200
     assert b"System Config" in response.data
     assert b"System Info" in response.data
+    assert b"Help" in response.data
     assert b"Bulk Upload Comments" in response.data
     assert b"Delete All Comments" in response.data
     assert b"Survey Metadata" in response.data
@@ -21,6 +22,7 @@ def test_survey_metadata_nav_visible_to_non_admin_but_not_system_config(client, 
     response = client.get("/comments", follow_redirects=True)
     assert response.status_code == 200
     assert b"Survey Metadata" in response.data
+    assert b"Help" in response.data
     assert b"System Config" not in response.data
 
 

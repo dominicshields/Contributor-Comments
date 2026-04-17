@@ -136,6 +136,12 @@ def index():
     )
 
 
+@bp.get("/help")
+@login_required
+def help_page():
+    return render_template("help/index.html")
+
+
 @bp.post("/comments/new")
 @login_required
 def create_comment():

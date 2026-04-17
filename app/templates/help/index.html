@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Help | Contributor Comments{% endblock %}
+
+{% block content %}
+<header class="ons-page-header">
+    <h1 class="ons-page-title">Help</h1>
+    <p class="ons-page-lead">How to use Contributor Comments day to day.</p>
+</header>
+
+<div class="ons-panel mb-4">
+    <h2 class="ons-section-title">Search and Add</h2>
+    <p><strong>Search tab:</strong> Use one or more filters and select <strong>Run Search</strong>.</p>
+    <ul>
+        <li><strong>RUREF</strong>: exact 11-digit reporting unit reference.</li>
+        <li><strong>Full Text Search</strong>: searches comment text, RUREF, period, survey code, and author.</li>
+        <li><strong>Surveys</strong>: limit to selected survey codes.</li>
+        <li><strong>Show Comments (Testing)</strong>: shows the lowest 10 RUREFs with comments, grouped by survey.</li>
+    </ul>
+    <p><strong>Add Comment tab:</strong> Enter RUREF, Survey, Period, and Comment, then select <strong>Save Comment</strong>.</p>
+    <ul>
+        <li>RUREF must be exactly 11 numeric characters.</li>
+        <li>Period must be valid <strong>YYYYMM</strong>.</li>
+        <li>Period month must match survey periodicity rules.</li>
+    </ul>
+</div>
+
+<div class="ons-panel mb-4">
+    <h2 class="ons-section-title">Survey Metadata</h2>
+    <p>Use <strong>Survey Metadata</strong> to maintain surveys used by comment capture and search.</p>
+    <ul>
+        <li>Add new survey code, description, periodicity, and forms per period.</li>
+        <li>Update existing survey metadata with <strong>Save</strong>.</li>
+        <li>Use <strong>Activate/Deactivate</strong> to control whether a survey is usable.</li>
+        <li>Use <strong>Delete</strong> to permanently remove a survey and related comments.</li>
+        <li>Use <strong>Import Surveys</strong> to upsert from <strong>surveys.csv</strong>.</li>
+    </ul>
+</div>
+
+<div class="ons-panel mb-4">
+    <h2 class="ons-section-title">System Config (Admin)</h2>
+    <ul>
+        <li><strong>System Info</strong>: summary counts, database size, and grouped comment counts.</li>
+        <li><strong>Bulk Upload Comments</strong>: upload a CSV file of comments.</li>
+        <li><strong>Delete All Comments</strong>: remove all comments and edit history.</li>
+    </ul>
+    <p>Bulk upload CSV required columns: <strong>ruref</strong>, <strong>survey_code</strong>, <strong>period</strong>, <strong>comment_text</strong>.</p>
+    <p>Optional columns: <strong>author_name</strong>, <strong>saved_at</strong>.</p>
+</div>
+
+<div class="ons-panel">
+    <h2 class="ons-section-title">Troubleshooting</h2>
+    <ul class="mb-0">
+        <li>If no results appear, check RUREF format and selected survey filters.</li>
+        <li>If Add Comment fails, check period format and survey periodicity month rules.</li>
+        <li>If access is denied to System Config pages, your user may not have admin rights.</li>
+    </ul>
+</div>
+{% endblock %}

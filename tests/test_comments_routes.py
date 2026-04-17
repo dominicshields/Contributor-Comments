@@ -220,3 +220,18 @@ def test_comment_search_can_match_author(client, login_analyst):
 
     assert response.status_code == 200
     assert b"Author searchable comment." in response.data
+
+
+def test_help_page_requires_login(client):
+    response = client.get("/help", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"Contributor Comments Sign In" in response.data
+
+
+def test_help_page_visible_for_logged_in_user(client, login_analyst):
+    response = client.get("/help", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"How to use Contributor Comments day to day." in response.data
+    assert b"System Config (Admin)" in response.data

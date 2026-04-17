@@ -106,6 +106,53 @@ erDiagram
 - Comment edits are recorded in a true edit history table
 - Admin survey metadata supports create, update, activate/deactivate, and complete delete (with confirmation)
 
+### Import Surveys (Admin)
+
+- The Survey Metadata page includes an `Import Surveys` button.
+- Import source file: `surveys.csv` at the repository root.
+- Expected CSV headers:
+	- `Survey`
+	- `Description`
+	- `Periodicity`
+	- `Forms_per_period`
+- Import behavior:
+	- Upserts by survey code (`Survey`): creates missing rows, updates existing rows.
+	- Invalid or blank `Periodicity` is normalized to `Other`.
+	- Blank/invalid/negative `Forms_per_period` is normalized to `0`.
+	- Invalid survey codes (not exactly 3 digits) are skipped.
+
+### System Config: Bulk Upload Comments (Admin)
+
+- Top navigation now includes `System Config` for admin users.
+- First menu item: `Bulk Upload Comments`.
+- Upload uses a file picker and accepts CSV files.
+
+CSV columns:
+
+- Required:
+	- `ruref`
+	- `survey_code`
+	- `period`
+	- `comment_text`
+- Optional:
+	- `author_name`
+	- `saved_at` (accepted formats: `YYYY-MM-DD HH:MM:SS`, `YYYY-MM-DDTHH:MM:SS`, `YYYY-MM-DD`)
+
+Import rules:
+
+- `ruref` must be exactly 11 numeric characters.
+- `survey_code` must exist and be active in Survey Metadata.
+- `period` must be valid `YYYYMM` and match survey periodicity rules:
+	- Monthly: any month
+	- Quarterly: `03`, `06`, `09`, `12`
+	- Annual: `12`
+	- Other: `12`
+	- Exception: survey `141` requires month `04`
+- Missing reporting units are created automatically.
+- If `author_name` is provided, the importer reuses or creates a user record for that name.
+- Rows failing validation are skipped.
+- On completion, the UI shows imported and skipped row counts.
+
 ## Seed Data
 
 Local and dev startup runs:
@@ -197,6 +244,21 @@ For local development, `AUTH_MODE=local` in `.env.example` enables username/pass
 
 ```bash
 uv run python run.py
+```
+
+If startup fails with an `AUTH_MODE is not set` error, reload your environment file in the same terminal and retry:
+
+```bash
+set -a
+source .env
+set +a
+uv run python run.py
+```
+
+If you still see an SSO header error on the login page during local development, verify `.env` contains:
+
+```bash
+AUTH_MODE=local
 ```
 
 Alternative:

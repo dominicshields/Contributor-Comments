@@ -7,26 +7,58 @@
     <p class="ons-page-lead">Maintain the survey list used by comment capture and search.</p>
 </header>
 
+{% if current_user.is_admin %}
 <div class="ons-panel mb-4">
     <h2 class="ons-section-title">Add Survey</h2>
-    <form method="post" action="{{ url_for('admin.add_survey') }}" class="row g-3">
-        <div class="col-md-4">
-            <label class="form-label" for="code">Survey Code (3 digits)</label>
-            <input class="form-control" type="text" name="code" id="code" maxlength="3" required>
-        </div>
-        <div class="col-md-4">
-            <label class="form-label" for="description">Description</label>
-            <input class="form-control" type="text" name="description" id="description" maxlength="255" required>
-        </div>
-        <div class="col-md-4">
-            <label class="form-label" for="forms_per_period">Forms Per Period</label>
-            <input class="form-control" type="number" name="forms_per_period" id="forms_per_period" min="0" step="1" value="0" required>
-        </div>
-        <div class="col-12">
-            <button class="btn btn-primary" type="submit">Add</button>
-        </div>
+    <button
+        class="btn btn-primary"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#add-survey-form"
+        aria-expanded="false"
+        aria-controls="add-survey-form"
+    >
+        Add Survey
+    </button>
+
+    <div class="collapse mt-3" id="add-survey-form">
+        <form method="post" action="{{ url_for('admin.add_survey') }}" class="row g-3">
+            <div class="col-md-2 col-lg-2">
+                <label class="form-label" for="code">Survey Code (3 digits)</label>
+                <input class="form-control" type="text" name="code" id="code" maxlength="3" required>
+            </div>
+            <div class="col-md-3 col-lg-3">
+                <label class="form-label" for="periodicity">Periodicity</label>
+                <select class="form-select" name="periodicity" id="periodicity" required>
+                    <option value="">Select periodicity</option>
+                    <option value="Annual">Annual</option>
+                    <option value="Quarterly">Quarterly</option>
+                    <option value="Monthly">Monthly</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="col-md-3 col-lg-3">
+                <label class="form-label" for="forms_per_period">Forms Per Period</label>
+                <input class="form-control" type="number" name="forms_per_period" id="forms_per_period" min="0" step="1" value="0" required>
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="description">Description</label>
+                <input class="form-control" type="text" name="description" id="description" maxlength="255" required>
+            </div>
+            <div class="col-12 d-flex gap-2">
+                <button class="btn btn-primary" type="submit">Save Survey</button>
+                <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#add-survey-form" aria-expanded="true" aria-controls="add-survey-form">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    <hr>
+
+    <form method="post" action="{{ url_for('admin.import_surveys') }}">
+        <button class="btn btn-outline-secondary" type="submit">Import Surveys</button>
     </form>
 </div>
+{% endif %}
 
 <div class="ons-panel">
     <h2 class="ons-section-title">Current Surveys</h2>
@@ -36,17 +68,56 @@
                 <tr>
                     <th>Code</th>
                     <th>Description</th>
+                    <th>Periodicity</th>
                     <th>Forms Per Period</th>
                     <th>Status</th>
+                    {% if current_user.is_admin %}
                     <th>Actions</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
             {% for survey in surveys %}
                 <tr>
                     <td>{{ survey.code }}</td>
+                    {% if current_user.is_admin %}
                     <td>{{ survey.description }}</td>
-                    <td>{{ survey.forms_per_period }}</td>
+                    <td>
+                        <input
+                            class="form-control form-control-sm"
+                            type="text"
+                            name="description"
+                            maxlength="255"
+                            value="{{ survey.description }}"
+                            form="update-survey-{{ survey.code }}"
+                            required
+                        >
+                    </td>
+                    <td>
+                        <select
+                            class="form-select form-select-sm"
+                            name="periodicity"
+                            form="update-survey-{{ survey.code }}"
+                            required
+                        >
+                            <option value="Annual" {% if survey.periodicity == 'Annual' %}selected{% endif %}>Annual</option>
+                            <option value="Quarterly" {% if survey.periodicity == 'Quarterly' %}selected{% endif %}>Quarterly</option>
+                            <option value="Monthly" {% if survey.periodicity == 'Monthly' %}selected{% endif %}>Monthly</option>
+                            <option value="Other" {% if survey.periodicity == 'Other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input
+                            class="form-control form-control-sm"
+                            type="number"
+                            name="forms_per_period"
+                            min="0"
+                            step="1"
+                            value="{{ survey.forms_per_period }}"
+                            form="update-survey-{{ survey.code }}"
+                            required
+                        >
+                    </td>
                     <td>
                         {% if survey.is_active %}
                         <span class="badge text-bg-success">Active</span>
@@ -55,24 +126,7 @@
                         {% endif %}
                     </td>
                     <td>
-                        <form method="post" action="{{ url_for('admin.update_survey_metadata', code=survey.code) }}" class="d-inline-flex gap-2 align-items-center mb-1">
-                            <input
-                                class="form-control form-control-sm"
-                                type="text"
-                                name="description"
-                                maxlength="255"
-                                value="{{ survey.description }}"
-                                required
-                            >
-                            <input
-                                class="form-control form-control-sm"
-                                type="number"
-                                name="forms_per_period"
-                                min="0"
-                                step="1"
-                                value="{{ survey.forms_per_period }}"
-                                required
-                            >
+                        <form id="update-survey-{{ survey.code }}" method="post" action="{{ url_for('admin.update_survey_metadata', code=survey.code) }}" class="d-inline">
                             <button class="btn btn-sm btn-outline-secondary" type="submit">Save</button>
                         </form>
                         <form method="post" action="{{ url_for('admin.toggle_survey_active', code=survey.code) }}" class="d-inline">
@@ -86,6 +140,18 @@
                             <button class="btn btn-sm btn-danger" type="submit">Delete</button>
                         </form>
                     </td>
+                    {% else %}
+                    <td>{{ survey.description }}</td>
+                    <td>{{ survey.periodicity }}</td>
+                    <td>{{ survey.forms_per_period }}</td>
+                    <td>
+                        {% if survey.is_active %}
+                        <span class="badge text-bg-success">Active</span>
+                        {% else %}
+                        <span class="badge text-bg-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
                 </tr>
             {% endfor %}
             </tbody>

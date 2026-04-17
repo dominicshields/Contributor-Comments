@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Bulk Upload Comments | Contributor Comments{% endblock %}
+
+{% block content %}
+<header class="ons-page-header">
+    <h1 class="ons-page-title">Bulk Upload Comments</h1>
+    <p class="ons-page-lead">Upload a CSV file to import multiple comments in one action.</p>
+</header>
+
+<div class="ons-panel">
+    <h2 class="ons-section-title">Upload File</h2>
+    <form method="post" action="{{ url_for('admin.bulk_upload_comments_submit') }}" enctype="multipart/form-data" class="row g-3">
+        <div class="col-12">
+            <label class="form-label" for="comments_file">Comments CSV</label>
+            <input class="form-control" type="file" id="comments_file" name="comments_file" accept=".csv,text/csv" required>
+            <div class="form-text">
+                Required columns: ruref, survey_code, period, comment_text. Optional columns: author_name, saved_at.
+            </div>
+        </div>
+        <div class="col-12 d-flex gap-2">
+            <button class="btn btn-primary" type="submit">Upload</button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('admin.surveys') }}">Back to Survey Metadata</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

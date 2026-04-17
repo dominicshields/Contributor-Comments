@@ -34,9 +34,16 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('comments.index') }}">Search and Add</a>
                 </li>
-                {% if current_user.is_admin %}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('admin.surveys') }}">Survey Metadata</a>
+                </li>
+                {% if current_user.is_admin %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="systemConfigMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">System Config</a>
+                    <ul class="dropdown-menu" aria-labelledby="systemConfigMenu">
+                        <li><a class="dropdown-item" href="{{ url_for('admin.bulk_upload_comments') }}">Bulk Upload Comments</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('admin.delete_all_comments_page') }}">Delete All Comments</a></li>
+                    </ul>
                 </li>
                 {% endif %}
             </ul>

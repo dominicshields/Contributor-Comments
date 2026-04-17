@@ -2,13 +2,19 @@ from __future__ import annotations
 
 import secrets
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 from flask_login import current_user, login_required, login_user, logout_user
-from werkzeug.security import generate_password_hash
 
 from ..extensions import db
 from ..models import User
-
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -34,15 +40,18 @@ def _sso_sign_in_from_headers() -> tuple[bool, str | None]:
 
     if user is None:
         if not auto_provision:
-            return False, "Your SSO identity is valid but no application user exists. Contact an administrator."
+            return (
+                False,
+                "Your SSO identity is valid but no application user exists. Contact an administrator.",
+            )
 
         user = User(
             username=username,
             full_name=full_name,
             is_admin=False,
-            # SSO users do not authenticate with local passwords.
-            password_hash=generate_password_hash(secrets.token_urlsafe(32)),
         )
+        # SSO users do not authenticate with local passwords, but the column is required.
+        user.set_password(secrets.token_urlsafe(32))
         db.session.add(user)
         db.session.commit()
     elif full_name and user.full_name != full_name:

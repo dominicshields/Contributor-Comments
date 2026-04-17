@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 
 def is_valid_ruref(value: str) -> bool:
@@ -16,5 +16,5 @@ def is_valid_period(value: str) -> bool:
     if month < 1 or month > 12:
         return False
 
-    current_year = datetime.now(UTC).year
+    current_year = datetime.now(timezone.utc).year
     return 1990 <= year <= current_year + 5

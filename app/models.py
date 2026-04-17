@@ -68,6 +68,7 @@ class Survey(db.Model):
     code: Mapped[str] = mapped_column(String(3), primary_key=True)
     display_order: Mapped[int] = mapped_column(Integer, nullable=False, unique=True)
     description: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    periodicity: Mapped[str] = mapped_column(String(50), default="", nullable=False)
     forms_per_period: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -81,6 +82,10 @@ class Survey(db.Model):
     __table_args__ = (
         CheckConstraint(
             "forms_per_period >= 0", name="ck_surveys_forms_per_period_non_negative"
+        ),
+        CheckConstraint(
+            "periodicity IN ('Annual', 'Quarterly', 'Monthly', 'Other')",
+            name="ck_surveys_periodicity_allowed",
         ),
     )
 

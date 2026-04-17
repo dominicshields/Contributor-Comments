@@ -17,6 +17,10 @@
 
 <div class="tab-content" id="commentsTabsContent">
     <div class="tab-pane fade show active" id="search-tab-pane" role="tabpanel" aria-labelledby="search-tab" tabindex="0">
+        <div class="small text-end mb-2">
+            <div>Number of Reporting Units with comments: {{ reporting_units_with_comments }}</div>
+            <div>Total comments: {{ total_comments }}</div>
+        </div>
         <div class="ons-panel mb-4">
             <h2 class="ons-section-title">Search</h2>
             <form class="row g-3" method="get" action="{{ url_for('comments.index') }}">
@@ -72,14 +76,40 @@
                 </div>
                 <div class="col-12">
                     <button class="btn btn-primary" type="submit">Run Search</button>
+                    <button class="btn btn-outline-secondary" type="submit" name="show_comments" value="1">Show Comments (Testing)</button>
                 </div>
             </form>
         </div>
 
         {% if search_performed %}
         <div class="ons-panel">
-            <h2 class="ons-section-title">Search Results</h2>
-            {% if grouped_results %}
+            <h2 class="ons-section-title">{% if show_comments %}Comments{% else %}Search Results{% endif %}</h2>
+            {% if show_comments %}
+                {% if ruref_groups %}
+                    {% for result_ruref, grouped_comments in ruref_groups.items() %}
+                    <section class="ons-panel mb-4">
+                        <h3 class="h5">RUREF {{ result_ruref }}</h3>
+                        {% for survey_code, survey_comments in grouped_comments.items() %}
+                        <section class="mb-3">
+                            <h4 class="h6 mt-3">Survey {{ survey_code }}</h4>
+                            {% for comment in survey_comments %}
+                            <article class="comment-card">
+                                <p class="comment-period"><strong>{{ comment.period }}</strong></p>
+                                <p class="comment-body">{{ comment.comment_text }}</p>
+                                <p class="comment-meta">
+                                    <span data-bs-toggle="tooltip" title="Created {{ comment.created_at | uk_datetime }} UTC->UK">{{ comment.author.full_name }}</span>
+                                    <a class="ms-2" href="{{ url_for('comments.ruref_detail', ruref=comment.ruref) }}">View RUREF</a>
+                                </p>
+                            </article>
+                            {% endfor %}
+                        </section>
+                        {% endfor %}
+                    </section>
+                    {% endfor %}
+                {% else %}
+                    <p class="mb-0">No comments found.</p>
+                {% endif %}
+            {% elif grouped_results %}
                 {% for survey_code, survey_comments in grouped_results.items() %}
                 <h3 class="h5 mt-3">Survey {{ survey_code }}</h3>
                 <div class="table-responsive">
@@ -105,7 +135,7 @@
                             <tr>
                                 <td>{{ comment.period }}</td>
                                 <td>{{ comment.ruref }}</td>
-                                <td>{{ comment.comment_text }}</td>
+                                <td>{{ comment.comment_text | highlight_term(q) }}</td>
                                 <td>
                                     <span data-bs-toggle="tooltip" title="{{ comment.created_at | uk_datetime }}">{{ comment.author.full_name }}</span>
                                 </td>

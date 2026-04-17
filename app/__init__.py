@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -9,6 +10,7 @@ from alembic import command
 from alembic.config import Config
 from flask import Flask, redirect, url_for
 from flask_login import current_user
+from markupsafe import Markup, escape
 
 from .extensions import csrf, db, login_manager
 from .models import User
@@ -36,7 +38,15 @@ def create_app() -> Flask:
         "DATABASE_URL", "postgresql+psycopg://postgres:postgres@localhost:5432/contributor_comments"
     )
     app.config["APP_ENV"] = os.getenv("APP_ENV", "dev").lower()
-    app.config["AUTH_MODE"] = os.getenv("AUTH_MODE", "sso").lower()
+
+    auth_mode_env = os.getenv("AUTH_MODE")
+    if app.config["APP_ENV"] in LOCAL_ENVS and auth_mode_env is None:
+        raise RuntimeError(
+            "AUTH_MODE is not set for a local/dev/test run. "
+            "Set AUTH_MODE=local (or AUTH_MODE=sso with proxy headers) and restart."
+        )
+
+    app.config["AUTH_MODE"] = (auth_mode_env or "sso").lower()
     app.config["SSO_HEADER_USERNAME"] = os.getenv("SSO_HEADER_USERNAME", "X-Forwarded-User")
     app.config["SSO_HEADER_FULL_NAME"] = os.getenv("SSO_HEADER_FULL_NAME", "X-Forwarded-Name")
     app.config["SSO_AUTO_PROVISION"] = os.getenv("SSO_AUTO_PROVISION", "true").lower() == "true"
@@ -76,6 +86,23 @@ def create_app() -> Flask:
 
         london = ZoneInfo("Europe/London")
         return value.astimezone(london).strftime("%d %b %Y %H:%M")
+
+    @app.template_filter("highlight_term")
+    def highlight_term_filter(value: str | None, term: str | None) -> Markup:
+        if value is None:
+            return Markup("")
+
+        escaped_value = escape(value)
+        if term is None:
+            return Markup(str(escaped_value))
+
+        cleaned_term = term.strip()
+        if not cleaned_term:
+            return Markup(str(escaped_value))
+
+        pattern = re.compile(re.escape(cleaned_term), re.IGNORECASE)
+        highlighted = pattern.sub(lambda match: f"<mark>{match.group(0)}</mark>", str(escaped_value))
+        return Markup(highlighted)
 
     with app.app_context():
         if app.config["APP_ENV"] in LOCAL_ENVS:

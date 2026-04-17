@@ -1,0 +1,172 @@
+Survey,Description,Periodicity,Forms_per_period
+001,"OLD - ABI  (97)",Annual,20700
+002,"Research and Development",Annual,4000
+007,"Low Carbon Survey",Annual,41000
+008,MPI,Monthly,9000
+009,MBS,Monthly,30000
+010,"PI (Purchases Survey)",Annual,
+012,"Monthly Stocks",Monthly,65
+013,"Quarterly Oil and Natural Gas",Quarterly,160
+014,"Annual Prodcom",Annual,25000
+016,"OLD - Construction Stocks",Quarterly,1350
+017,"Quarterly Stocks",Quarterly,7500
+018,"OLD - Non-Production Stocks",Quarterly,6700
+019,"Quarterly Acquisitions and Disposals of Capital Assets Survey (QCAS)",Quarterly,6200
+021,"OLD - QIDSS",Quarterly,16400
+022,QPI,Quarterly,1600
+023,RSI,Monthly,4800
+024,"Quarterly Fuels Inquiry",Quarterly,600
+028,"OLD - QFL",Quarterly,0
+029,"OLD - QFL",Quarterly,0
+039,"Business Profiling Team",,
+041,"Annual Employment Survey Top-up",Annual,
+042,"DTI/CMI Construction CISTATS",Other,
+045,"DETINI Quarterly Employment Survey",Quarterly,
+047,"NI Census of Employment",Annual,
+048,"OLD - Annual Private Sector - Services",Annual,2800
+049,"OLD - Annual Retail Carry In",Annual,440
+050,"OLD - Annual Catering Inquiry",Annual,4200
+051,"OLD - Annual Wholesale Inquiry",Annual,6300
+052,"OLD - Annual Service Trades Inquiry",Annual,15400
+053,"OLD - Annual Motor Trades Inquiry",Annual,5800
+054,"OLD - Annual Retail Inquiry",Annual,10200
+055,"OLD - Annual Property Inquiry",Annual,3800
+056,"Merchants Inquiry",Annual,260
+057,"Quarterly International Trade in Services Inquiry",Quarterly,600
+058,"Annual International Trade in Services Inquiry",Annual,19963
+059,"Annual Film and Television Inquiry",Annual,600
+061,"Services Producer Price Index",Quarterly,1233
+062,"Annual Inquiry into direct investment in the UK",Annual,1500
+063,"Annual Inquiry into direct investment abroad",Annual,850
+064,"Quarterly inquiry into direct investment into the UK",Quarterly,550
+065,"Quarterly Inquiry into direct investment abroad",Quarterly,300
+066,"Quarterly Sand and Gravel Land Won",Quarterly,200
+067,"OLD - Quarterly Concrete Blocks",Quarterly,80
+068,"Quarterly Roofing Tiles",Quarterly,7
+070,"OLD - Quarterly Fibre Cement",Quarterly,2
+071,"Quarterly Slate",Quarterly,12
+072,"Cinemas Inquiry",Quarterly,
+073,"Monthly Concrete Blocks",Monthly,54
+074,"Monthly Bricks",Monthly,92
+076,"Quarterly Sand and Gravel Marine Dredged",Quarterly,85
+077,"OLD - AMRI (Annual Minerals Raised)",Annual,2000
+078,"OLD - Annual Electricity Generated Inquiry",Annual,350
+079,"OLD - Quarterly Electricity Generated",Quarterly,104
+081,"Motor Vehicle Production Inquiry (Cars)",Monthly,
+082,"Motor Vehicle Production Inquiry (Commercial Vehicles)",Monthly,
+083,"Motor Vehicle Production Inquiry (Industrial Disputes)",Monthly,
+084,"Motor Vehicle Production Inquiry (Engines)",Monthly,
+085,"OLD - Financial Lessors - Expenditure",Annual,0
+086,"Quarterly FALS",Quarterly,650
+088,"Mergers and Acquisitions",Quarterly,
+089,"Inward Mergers and Acquisitions ",Quarterly,
+090,"Outward Mergers and Acquisitions",Quarterly,
+092,"INQUIRY CLOSED - No Further Info is required - Management and Expectations Survey",Annual,
+093,"Financial Survey of Pension Schemes",Quarterly,920
+101,"Quarterly Insurance companies: Long term funds - Fin Assets",Quarterly,52
+102,"Quarterly Insurance companies: General funds - Fin Assets",Quarterly,52
+103,"Quarterly Insurance companies: Long term funds - Income and Expenditure",Quarterly,52
+104,"Quarterly Insurance companies: General funds - Income and Expenditure",Quarterly,60
+105,"Annual Insurance companies: Long term funds - Balance Sheet",Annual,75
+106,"Annual Insurance companies: General funds - Balance Sheet",Annual,90
+107,"Annual Insurance companies: Long term funds - Income and Expenditure",Annual,76
+108,"Annual Insurance companies: General funds - Income and Expenditure",Annual,77
+109,"OLD - Annual inquiry into Overseas Direct Investment Insurance companies - Inward",Annual,60
+110,"OLD - Annual inquiry into Overseas Direct Investment Insurance companies - Outward",Annual,33
+111,"OLD - Quarterly Inquiry into Pension Funds  -  Transactions in financial assets",Quarterly,332
+112,"OLD - Quarterly Inquiry into Pension Funds  -  Income and expenditure",Quarterly,332
+113,"OLD - Annual Inquiry into Pension Funds  -  Balance sheet",Annual,332
+116,"Services Producer Price Index - Export",Quarterly,1187
+117,"Annual Unit Trusts - Liabilities & Assets",Annual,
+118,"Quarterly Unit Trusts - Transactions",Quarterly,86
+119,"Annual Investment Trusts - Assets and Liabilities",Annual,44
+120,"Quarterly Investment Trusts - Transactions",Quarterly,46
+121,"OLD - Securities Dealers - Overseas Direct Investment",Quarterly,25
+122,"Annual Property Unit Trusts - Assets and Liabilities",Annual,8
+123,"Quarterly Property Unit Trusts - Transactions",Quarterly,12
+124,"OLD - Securities Dealers - Assets Liabilities and Transactions",Quarterly,66
+125,"OLD - Securities Dealers - Income and Expenditure",Quarterly,66
+126,"OLD - Quarterly Credit Grantors",Quarterly,0
+127,"Monthly Credit Grantors",Monthly,125
+128,"OLD - Welsh Voluntary Top-Up",,
+129,"Old - Welsh Statutory Top-Up",,
+130,"Scottish Voluntary Top-Up",,
+131,"Scottish Statutory Top-Up",,
+132,"PPI (Producer Price Index)",Monthly,
+133,"EPI ( Export Price Index)",Monthly,
+134,"Monthly Wages and Salaries Survey",Monthly,8500
+135,"OLD - Insurance Brokerage Inquiry",Annual,0
+136,"OLD - Annual Inquiry into Fund Managers",Annual,0
+137,"Public Corporations",Monthly,
+139,"Short Term Employment Survey",Quarterly,
+141,"Annual Survey of Hours and Earning (ASHE)",Annual,260000
+142,"Annual Commodity Trading",Annual,30
+144,"UK Innovation Survey",Other,
+147,"Survey of Environmental Protection Expenditure by Industry (EPE)",Annual,
+156,"IPI ( Import Price Index)",Monthly,
+159,"Pilot Purchases Inquiry (DSS)",Annual,1000
+160,"Quarterly Public Sector Employees Survey - Local Authorities",Quarterly,850
+161,"PPI (Producer Price Index - recruitment)",Other,
+162,"Imported Capital Goods",Monthly,
+165,"Quarterly Public Sector Employees Survey - Public Bodies",Quarterly,850
+166,"OLD - Quarterly Financial Services Survey",Quarterly,138
+167,"OLD - Annual Financial Services Survey",Annual,120
+168,"Retail Trades Quarterly Commodity Inquiry",Quarterly,73
+169,"Quarterly Public Sector Employees Survey - Civil Service",Quarterly,110
+170,"Capital Stocks survey",Other,5000
+171,"Annual Acquisitions and Disposals of Capital Assets Survey",Annual,2500
+172,"Eurostat pilot into purchases of services",,
+173,"Eurostat Proving",,
+175,"Quarterly Dividends Inquiry",Quarterly,1200
+180,ASGS,Annual,
+180,SERVCOM,Quarterly,
+181,"Vacancies Inquiry",Monthly,
+182,"Vacancies Inquiry",Quarterly,
+183,"Vacancies Inquiry",Quarterly,
+184,"Vacancies Inquiry",Quarterly,
+185,"Vacancies Inquiry",Monthly,
+187,"E-Commerce Transactions by UK Businesses",Annual,11821
+188,"Recruitment for Export prices (EPI)",Other,
+189,"Recruitment for Import Price Index (IPI)",Other,
+190,"Recruitment for Imported Capital Goods (ICG)",Other,
+191,"OLD - Quarterly NPISH (was never actually used)",Quarterly,300
+192,"NES Trailer Inquiry",,
+193,"Eurostat pilot - Business Services",Annual,6000
+194,"Annual Railways Investment Inquiry",Quarterly,30
+195,"Services Turnover Survey",Other,5200
+196,"Survey into Principal Products",Other,320
+199,"National Balance Sheet",,
+202,"ABI/2 (Non-Production)",Annual,52000
+202,"ABI/2 (Production)",Annual,21000
+203,"OLD - Business Register Survey 1",Annual,
+204,"OLD - Business Register Survey 2",Quarterly,2000
+209,"Internet Service Providers",Quarterly,47
+210,"R&D PNP Survey",Annual,200
+211,"Quarterly Capex - Private Finance Initiative",Quarterly,131
+213,"BRS1 Pilot",Annual,
+218,"OLD - Occupational Pension Scheme Survey (OPSS)",Annual,2000
+221,"Business Register & Employment Survey (BRES)",Annual,83500
+222,"International Sourcing",Other,800
+225,"Outwards Foreign Affiliates Statisitics (OFATS)",Annual,100
+226,TEST,Monthly,40
+228,"Construction Output and Employment Survey",Monthly,8000
+229,"OLD - Construction New Orders Survey - Part 1",Quarterly,9500
+230,"OLD - Construction New Orders Survey - Part 2",Quarterly,9500
+231,"Investment in Intangible Assets Survey",Annual,2034
+233,"Access To Finance",Annual,2500
+236,"Labour Disputes",Monthly,
+241,"Business Register Survey",Quarterly,2000
+242,"Financial Institutions Proving Survey ",Quarterly,60000
+244,"EDC - MWSS",Monthly,8500
+266,"Financial Services Survey Quarterly Return of Assets and Liabilities ",Quarterly,
+267,"Financial Services Survey Quarterly Return of Income and Expenditure",Quarterly,
+268,"Trust and Funds Survey (T&Fs) A&L",,
+269,"Trust and Funds Survey (TAFs) I&E",,
+283,"Business Insights And Conditions Survey",Other,
+300,"IoP Dummy",Monthly,9000
+350,"Welsh Index of Distribution",Quarterly,30
+500,"Government Research and Development Survey",Annual,140
+827,827,,
+862,862,,
+863,863,,
+999,"BRO - Non Specific",,

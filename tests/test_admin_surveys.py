@@ -16,6 +16,21 @@ def test_admin_surveys_page_displays_codes_in_ascending_order(client, login_admi
     assert index_002 < index_023 < index_138 < index_221 < index_241
 
 
+def test_non_admin_can_view_survey_metadata_page(client, login_analyst):
+    response = client.get("/admin/surveys", follow_redirects=True)
+    assert response.status_code == 200
+    assert b"Survey Metadata" in response.data
+    assert b"Current Surveys" in response.data
+    assert b"Add Survey" not in response.data
+    assert b"Import Surveys" not in response.data
+
+
+def test_admin_surveys_page_has_import_button(client, login_admin):
+    response = client.get("/admin/surveys", follow_redirects=True)
+    assert response.status_code == 200
+    assert b"Import Surveys" in response.data
+
+
 def test_admin_can_toggle_survey_activation(client, login_admin, app):
     response = client.post("/admin/surveys/221/toggle-active", follow_redirects=True)
     assert response.status_code == 200
@@ -29,7 +44,11 @@ def test_admin_can_toggle_survey_activation(client, login_admin, app):
 def test_admin_can_update_survey_metadata(client, login_admin, app):
     response = client.post(
         "/admin/surveys/221/metadata",
-        data={"description": "Annual Contributors Survey", "forms_per_period": "120"},
+        data={
+            "description": "Annual Contributors Survey",
+            "periodicity": "Quarterly",
+            "forms_per_period": "120",
+        },
         follow_redirects=True,
     )
     assert response.status_code == 200
@@ -38,13 +57,19 @@ def test_admin_can_update_survey_metadata(client, login_admin, app):
         survey = db.session.get(Survey, "221")
         assert survey is not None
         assert survey.description == "Annual Contributors Survey"
+        assert survey.periodicity == "Quarterly"
         assert survey.forms_per_period == 120
 
 
 def test_admin_can_add_survey_with_metadata(client, login_admin, app):
     response = client.post(
         "/admin/surveys",
-        data={"code": "777", "description": "Test New Survey", "forms_per_period": "42"},
+        data={
+            "code": "777",
+            "description": "Test New Survey",
+            "periodicity": "Monthly",
+            "forms_per_period": "42",
+        },
         follow_redirects=True,
     )
     assert response.status_code == 200
@@ -53,6 +78,7 @@ def test_admin_can_add_survey_with_metadata(client, login_admin, app):
         survey = db.session.get(Survey, "777")
         assert survey is not None
         assert survey.description == "Test New Survey"
+        assert survey.periodicity == "Monthly"
         assert survey.forms_per_period == 42
 
 
@@ -77,3 +103,35 @@ def test_admin_can_delete_survey_completely(client, login_admin, app):
         assert survey is None
         comments_for_survey = Comment.query.filter_by(survey_code="221").count()
         assert comments_for_survey == 0
+
+
+def test_admin_rejects_invalid_periodicity(client, login_admin, app):
+    response = client.post(
+        "/admin/surveys",
+        data={
+            "code": "778",
+            "description": "Invalid periodicity survey",
+            "periodicity": "Weekly",
+            "forms_per_period": "12",
+        },
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    assert b"Survey periodicity must be one of" in response.data
+
+    with app.app_context():
+        survey = db.session.get(Survey, "778")
+        assert survey is None
+
+
+def test_admin_can_import_surveys_from_csv(client, login_admin, app):
+    response = client.post("/admin/surveys/import", follow_redirects=True)
+    assert response.status_code == 200
+    assert b"Surveys import complete." in response.data
+
+    with app.app_context():
+        imported = db.session.get(Survey, "001")
+        assert imported is not None
+        assert imported.description == "OLD - ABI  (97)"
+        assert imported.periodicity == "Annual"
+        assert imported.forms_per_period == 20700

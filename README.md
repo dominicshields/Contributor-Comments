@@ -98,8 +98,10 @@ erDiagram
 - Search supports:
 	- Direct RUREF lookup
 	- Survey filter (single or multiple)
-	- Full-text contains search across comment text and key identifiers
+	- Full-text contains search across comment text, key identifiers, and comment author name/username
 - Main page uses separate tabs for `Search` and `Add Comment`
+- Search text matches are highlighted in the comment text shown in results
+- Search tab includes `Show Comments (Testing)` to load the lowest 10 RUREFs with comments, grouped in the usual survey order
 - Search results are shown only after a search is performed
 - RUREF detail page groups comments by survey in configured survey order, with descending period order
 - Author displayed after comment with created timestamp on hover tooltip
@@ -151,7 +153,32 @@ Import rules:
 - Missing reporting units are created automatically.
 - If `author_name` is provided, the importer reuses or creates a user record for that name.
 - Rows failing validation are skipped.
-- On completion, the UI shows imported and skipped row counts.
+- On completion, the UI shows added comment count, skipped row count, and elapsed seconds.
+
+### System Config: System Info (Admin)
+
+- System Config includes a `System Info` page for admin users.
+- The page displays:
+	- Number of Reporting Units with comments
+	- Total number of comments
+	- Total number of comment authors
+	- Database size
+	- Count of comments by each survey code
+	- Count of comments by survey period
+
+## Screenshots
+
+### Search Results for `boron`
+
+![Search results for boron](docs/screenshots/search-boron.png)
+
+### Survey Metadata
+
+![Survey metadata page](docs/screenshots/survey-metadata.png)
+
+### System Information
+
+![System information page](docs/screenshots/system-info.png)
 
 ## Seed Data
 

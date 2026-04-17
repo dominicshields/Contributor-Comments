@@ -141,19 +141,38 @@ def test_search_tab_displays_reporting_unit_and_comment_totals(client, login_ana
     assert b"Number of Reporting Units with comments: 2" in response.data
     assert b"Total comments: 3" in response.data
 
-    def test_comment_search_highlights_search_term_in_results(client, login_analyst):
-        client.post(
-            "/comments/new",
-            data={
-                "ruref": "12345678901",
-                "survey": "221",
-                "period": "202601",
-                "comment": "This is a contributor note.",
-            },
-            follow_redirects=True,
-        )
 
-        response = client.get("/comments?q=contributor", follow_redirects=True)
+def test_comment_search_highlights_search_term_in_results(client, login_analyst):
+    client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678901",
+            "survey": "221",
+            "period": "202601",
+            "comment": "This is a contributor note.",
+        },
+        follow_redirects=True,
+    )
 
-        assert response.status_code == 200
-        assert b"<mark>contributor</mark>" in response.data
+    response = client.get("/comments?q=contributor", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"<mark>contributor</mark>" in response.data
+
+
+def test_comment_search_can_match_author(client, login_analyst):
+    client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678901",
+            "survey": "221",
+            "period": "202601",
+            "comment": "Author searchable comment.",
+        },
+        follow_redirects=True,
+    )
+
+    response = client.get("/comments?q=analyst1", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"Author searchable comment." in response.data

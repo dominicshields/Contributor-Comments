@@ -7,7 +7,7 @@ from flask_login import current_user, login_required
 from sqlalchemy import distinct, or_
 
 from ..extensions import db
-from ..models import Comment, CommentEdit, ReportingUnit, Survey
+from ..models import Comment, CommentEdit, ReportingUnit, Survey, User
 from ..validation import is_valid_period, is_valid_ruref
 
 
@@ -110,6 +110,8 @@ def index():
                     Comment.ruref.ilike(like_pattern),
                     Comment.period.ilike(like_pattern),
                     Comment.survey_code.ilike(like_pattern),
+                    Comment.author.has(User.full_name.ilike(like_pattern)),
+                    Comment.author.has(User.username.ilike(like_pattern)),
                 )
             )
 

@@ -10,6 +10,7 @@ from time import perf_counter
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from sqlalchemy import distinct
 from werkzeug.security import generate_password_hash
 
 from ..extensions import db
@@ -119,6 +120,40 @@ def _ensure_admin():
         flash("Admin access required.", "error")
         return False
     return True
+
+
+def _format_size(num_bytes: int) -> str:
+    size = float(num_bytes)
+    units = ["bytes", "KB", "MB", "GB", "TB"]
+    for unit in units:
+        if size < 1024 or unit == units[-1]:
+            if unit == "bytes":
+                return f"{int(size)} {unit}"
+            return f"{size:.2f} {unit}"
+        size /= 1024
+    return f"{int(num_bytes)} bytes"
+
+
+def _database_size_display() -> str:
+    engine = db.engine
+    backend_name = engine.url.get_backend_name()
+
+    if backend_name == "postgresql":
+        size_bytes = db.session.execute(db.text("SELECT pg_database_size(current_database())")).scalar()
+        return _format_size(int(size_bytes or 0))
+
+    if backend_name == "sqlite":
+        database_name = engine.url.database
+        if not database_name or database_name == ":memory:":
+            return "In-memory database"
+
+        database_path = Path(database_name)
+        if database_path.exists():
+            return _format_size(database_path.stat().st_size)
+
+        return "Database file not found"
+
+    return f"Unavailable for {backend_name}"
 
 
 @bp.get("/surveys")
@@ -433,6 +468,41 @@ def bulk_upload_comments_submit():
         "success",
     )
     return redirect(url_for("admin.bulk_upload_comments"))
+
+
+@bp.get("/system-config/system-info")
+@login_required
+def system_info():
+    if not _ensure_admin():
+        return redirect(url_for("comments.index"))
+
+    reporting_units_with_comments = db.session.query(db.func.count(distinct(Comment.ruref))).scalar() or 0
+    total_comments = db.session.query(db.func.count(Comment.id)).scalar() or 0
+    total_comment_authors = db.session.query(db.func.count(distinct(Comment.author_id))).scalar() or 0
+    database_size = _database_size_display()
+
+    comments_by_survey = (
+        db.session.query(Comment.survey_code, db.func.count(Comment.id))
+        .group_by(Comment.survey_code)
+        .order_by(Comment.survey_code.asc())
+        .all()
+    )
+    comments_by_period = (
+        db.session.query(Comment.period, db.func.count(Comment.id))
+        .group_by(Comment.period)
+        .order_by(Comment.period.desc())
+        .all()
+    )
+
+    return render_template(
+        "admin/system_info.html",
+        reporting_units_with_comments=reporting_units_with_comments,
+        total_comments=total_comments,
+        total_comment_authors=total_comment_authors,
+        database_size=database_size,
+        comments_by_survey=comments_by_survey,
+        comments_by_period=comments_by_period,
+    )
 
 
 @bp.get("/system-config/delete-all-comments")

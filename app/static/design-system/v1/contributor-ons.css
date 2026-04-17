@@ -197,8 +197,72 @@ a:focus {
     vertical-align: top;
 }
 
+.survey-metadata-table td,
+.survey-metadata-table th {
+    vertical-align: middle;
+}
+
+.survey-metadata-table td:nth-child(2),
+.survey-metadata-table th:nth-child(2) {
+    width: 32%;
+}
+
+.survey-metadata-table td:nth-child(3),
+.survey-metadata-table th:nth-child(3) {
+    width: 11rem;
+}
+
+.survey-metadata-table .forms-per-period-col {
+    width: 1%;
+    white-space: nowrap;
+    padding-right: 1rem;
+}
+
+.survey-forms-per-period-input {
+    width: 10ch;
+    min-width: 10ch;
+}
+
+.survey-periodicity-select {
+    min-width: 9.5rem;
+}
+
+.survey-metadata-table td:nth-child(5),
+.survey-metadata-table th:nth-child(5) {
+    padding-left: 1rem;
+}
+
+.survey-description-input {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.survey-actions-cell {
+    display: inline-flex;
+    gap: 0.35rem;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.survey-action-form {
+    margin: 0;
+}
+
+.survey-action-btn {
+    padding: 0.18rem 0.45rem;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: center;
+}
+
 @media (max-width: 768px) {
     .ons-main {
         padding-top: 1rem;
+    }
+
+    .survey-actions-cell {
+        display: flex;
+        flex-wrap: wrap;
     }
 }

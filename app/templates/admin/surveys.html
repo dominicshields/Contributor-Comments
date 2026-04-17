@@ -63,13 +63,13 @@
 <div class="ons-panel">
     <h2 class="ons-section-title">Current Surveys</h2>
     <div class="table-responsive">
-        <table class="table table-sm">
+        <table class="table table-sm survey-metadata-table">
             <thead>
                 <tr>
                     <th>Code</th>
                     <th>Description</th>
                     <th>Periodicity</th>
-                    <th>Forms Per Period</th>
+                    <th class="forms-per-period-col">Forms Per Period</th>
                     <th>Status</th>
                     {% if current_user.is_admin %}
                     <th>Actions</th>
@@ -81,10 +81,9 @@
                 <tr>
                     <td>{{ survey.code }}</td>
                     {% if current_user.is_admin %}
-                    <td>{{ survey.description }}</td>
                     <td>
                         <input
-                            class="form-control form-control-sm"
+                            class="form-control form-control-sm survey-description-input"
                             type="text"
                             name="description"
                             maxlength="255"
@@ -95,7 +94,7 @@
                     </td>
                     <td>
                         <select
-                            class="form-select form-select-sm"
+                            class="form-select form-select-sm survey-periodicity-select"
                             name="periodicity"
                             form="update-survey-{{ survey.code }}"
                             required
@@ -106,9 +105,9 @@
                             <option value="Other" {% if survey.periodicity == 'Other' %}selected{% endif %}>Other</option>
                         </select>
                     </td>
-                    <td>
+                    <td class="forms-per-period-col">
                         <input
-                            class="form-control form-control-sm"
+                            class="form-control form-control-sm survey-forms-per-period-input"
                             type="number"
                             name="forms_per_period"
                             min="0"
@@ -126,24 +125,58 @@
                         {% endif %}
                     </td>
                     <td>
-                        <form id="update-survey-{{ survey.code }}" method="post" action="{{ url_for('admin.update_survey_metadata', code=survey.code) }}" class="d-inline">
-                            <button class="btn btn-sm btn-outline-secondary" type="submit">Save</button>
+                        <div class="survey-actions-cell">
+                        <form id="update-survey-{{ survey.code }}" method="post" action="{{ url_for('admin.update_survey_metadata', code=survey.code) }}" class="survey-action-form">
+                            <button
+                                class="btn btn-sm btn-outline-secondary survey-action-btn"
+                                type="submit"
+                                data-bs-toggle="tooltip"
+                                title="Save"
+                                aria-label="Save"
+                            >
+                                Save
+                            </button>
                         </form>
-                        <form method="post" action="{{ url_for('admin.toggle_survey_active', code=survey.code) }}" class="d-inline">
+                        <form method="post" action="{{ url_for('admin.toggle_survey_active', code=survey.code) }}" class="survey-action-form">
                             {% if survey.is_active %}
-                            <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
+                            <button
+                                class="btn btn-sm btn-outline-danger survey-action-btn"
+                                type="submit"
+                                data-bs-toggle="tooltip"
+                                title="Deactivate"
+                                aria-label="Deactivate"
+                            >
+                                Deactivate
+                            </button>
                             {% else %}
-                            <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
+                            <button
+                                class="btn btn-sm btn-outline-success survey-action-btn"
+                                type="submit"
+                                data-bs-toggle="tooltip"
+                                title="Activate"
+                                aria-label="Activate"
+                            >
+                                Activate
+                            </button>
                             {% endif %}
                         </form>
-                        <form method="post" action="{{ url_for('admin.delete_survey', code=survey.code) }}" class="d-inline" onsubmit="return confirm('Delete survey {{ survey.code }} and all related comments? This cannot be undone.');">
-                            <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+                        <form method="post" action="{{ url_for('admin.delete_survey', code=survey.code) }}" class="survey-action-form" onsubmit="return confirm('Delete survey {{ survey.code }} and all related comments? This cannot be undone.');">
+                            <button
+                                class="btn btn-sm btn-danger survey-action-btn"
+                                type="submit"
+                                data-bs-toggle="tooltip"
+                                title="Delete"
+                                aria-label="Delete"
+                            >
+                                Delete
+                            </button>
                         </form>
+                        </div>
                     </td>
                     {% else %}
                     <td>{{ survey.description }}</td>
                     <td>{{ survey.periodicity }}</td>
-                    <td>{{ survey.forms_per_period }}</td>
+                    <td class="forms-per-period-col">{{ survey.forms_per_period }}</td>
                     <td>
                         {% if survey.is_active %}
                         <span class="badge text-bg-success">Active</span>
@@ -158,4 +191,39 @@
         </table>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const descriptionInputs = Array.from(document.querySelectorAll('.survey-description-input'));
+
+    function updateDescriptionTooltip(input) {
+        const value = input.value || '';
+        if (!value.trim()) {
+            input.removeAttribute('title');
+            return;
+        }
+
+        if (input.scrollWidth > input.clientWidth + 1) {
+            input.setAttribute('title', value);
+        } else {
+            input.removeAttribute('title');
+        }
+    }
+
+    descriptionInputs.forEach(function (input) {
+        updateDescriptionTooltip(input);
+        input.addEventListener('input', function () {
+            updateDescriptionTooltip(input);
+        });
+    });
+
+    window.addEventListener('resize', function () {
+        descriptionInputs.forEach(function (input) {
+            updateDescriptionTooltip(input);
+        });
+    });
+});
+</script>
 {% endblock %}

@@ -7,64 +7,115 @@
     <p class="ons-page-lead">Current high-level information about comments stored in the system.</p>
 </header>
 
-<div class="ons-panel mb-4">
-    <h2 class="ons-section-title">Summary</h2>
-    <dl class="row mb-0">
-        <dt class="col-sm-5">Number of Reporting Units With comments</dt>
-        <dd class="col-sm-7">{{ reporting_units_with_comments }}</dd>
-        <dt class="col-sm-5">Total number of comments</dt>
-        <dd class="col-sm-7">{{ total_comments }}</dd>
-        <dt class="col-sm-5">Total number of comment authors</dt>
-        <dd class="col-sm-7">{{ total_comment_authors }}</dd>
-        <dt class="col-sm-5">Database size</dt>
-        <dd class="col-sm-7">{{ database_size }}</dd>
-    </dl>
-</div>
+<ul class="nav nav-tabs mb-3" id="systemInfoTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="comments-tab" data-bs-toggle="tab" data-bs-target="#comments-tab-pane" type="button" role="tab" aria-controls="comments-tab-pane" aria-selected="true">Comments</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="contacts-tab" data-bs-toggle="tab" data-bs-target="#contacts-tab-pane" type="button" role="tab" aria-controls="contacts-tab-pane" aria-selected="false">Contacts</button>
+    </li>
+</ul>
 
-<div class="row g-4">
-    <div class="col-lg-6">
-        <div class="ons-panel h-100">
-            <h2 class="ons-section-title">Count of comments by each survey code</h2>
-            {% if comments_by_survey %}
-            <div class="table-responsive">
-                <table class="table table-sm mb-0">
-                    <thead>
-                        <tr>
-                            <th>Survey Code</th>
-                            <th>Comment Count</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {% for survey_code, count in comments_by_survey %}
-                        <tr>
-                            <td>{{ survey_code }}</td>
-                            <td>{{ count }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+<div class="tab-content" id="systemInfoTabsContent">
+    <div class="tab-pane fade show active" id="comments-tab-pane" role="tabpanel" aria-labelledby="comments-tab" tabindex="0">
+        <div class="ons-panel mb-4">
+            <h2 class="ons-section-title">Comments Summary</h2>
+            <dl class="row mb-0">
+                <dt class="col-sm-5">Number of Reporting Units With comments</dt>
+                <dd class="col-sm-7">{{ reporting_units_with_comments }}</dd>
+                <dt class="col-sm-5">Total number of comments</dt>
+                <dd class="col-sm-7">{{ total_comments }}</dd>
+                <dt class="col-sm-5">Total number of comment authors</dt>
+                <dd class="col-sm-7">{{ total_comment_authors }}</dd>
+                <dt class="col-sm-5">Database size</dt>
+                <dd class="col-sm-7">{{ database_size }}</dd>
+            </dl>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="ons-panel h-100">
+                    <h2 class="ons-section-title">Count of comments by each survey code</h2>
+                    {% if comments_by_survey %}
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Survey Code</th>
+                                    <th>Comment Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for survey_code, count in comments_by_survey %}
+                                <tr>
+                                    <td>{{ survey_code }}</td>
+                                    <td>{{ count }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="mb-0">No comments found.</p>
+                    {% endif %}
+                </div>
             </div>
-            {% else %}
-            <p class="mb-0">No comments found.</p>
-            {% endif %}
+            <div class="col-lg-6">
+                <div class="ons-panel h-100">
+                    <h2 class="ons-section-title">Count of comments by survey period</h2>
+                    {% if comments_by_period %}
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Period</th>
+                                    <th>Comment Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for period, count in comments_by_period %}
+                                <tr>
+                                    <td>{{ period }}</td>
+                                    <td>{{ count }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="mb-0">No comments found.</p>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
-    <div class="col-lg-6">
-        <div class="ons-panel h-100">
-            <h2 class="ons-section-title">Count of comments by survey period</h2>
-            {% if comments_by_period %}
+
+    <div class="tab-pane fade" id="contacts-tab-pane" role="tabpanel" aria-labelledby="contacts-tab" tabindex="0">
+        <div class="ons-panel mb-4">
+            <h2 class="ons-section-title">Contacts Summary</h2>
+            <dl class="row mb-0">
+                <dt class="col-sm-5">Number of Reporting Units With contacts</dt>
+                <dd class="col-sm-7">{{ reporting_units_with_contacts }}</dd>
+                <dt class="col-sm-5">Total number of contacts</dt>
+                <dd class="col-sm-7">{{ total_contacts }}</dd>
+            </dl>
+        </div>
+
+        <div class="ons-panel">
+            <h2 class="ons-section-title">Count of contacts by survey code</h2>
+            {% if contacts_by_scope %}
             <div class="table-responsive">
                 <table class="table table-sm mb-0">
                     <thead>
                         <tr>
-                            <th>Period</th>
-                            <th>Comment Count</th>
+                            <th>Scope</th>
+                            <th>Contact Count</th>
                         </tr>
                     </thead>
                     <tbody>
-                    {% for period, count in comments_by_period %}
+                    {% for scope, count in contacts_by_scope %}
                         <tr>
-                            <td>{{ period }}</td>
+                            <td>{{ scope }}</td>
                             <td>{{ count }}</td>
                         </tr>
                     {% endfor %}
@@ -72,7 +123,7 @@
                 </table>
             </div>
             {% else %}
-            <p class="mb-0">No comments found.</p>
+            <p class="mb-0">No contacts found.</p>
             {% endif %}
         </div>
     </div>

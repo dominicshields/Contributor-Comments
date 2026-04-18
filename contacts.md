@@ -20,3 +20,6 @@ This will have a search page with filters for RUREF
 It will display contact full details within ruref and survey, ordered by survey
 
 There should be another button that shows all contacts ordered by survey within ruref, it should allow editing of details
+
+Contacts V3
+Add to the system info functionality similar stats to those which exist already on Contacts, have this in another tab

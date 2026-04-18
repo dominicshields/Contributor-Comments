@@ -196,13 +196,18 @@ Import rules:
 ### System Config: System Info (Admin)
 
 - System Config includes a `System Info` page for admin users.
-- The page displays:
-	- Number of Reporting Units with comments
-	- Total number of comments
-	- Total number of comment authors
-	- Database size
-	- Count of comments by each survey code
-	- Count of comments by survey period
+- The page displays two tabs:
+	- `Comments` tab:
+		- Number of Reporting Units with comments
+		- Total number of comments
+		- Total number of comment authors
+		- Database size
+		- Count of comments by each survey code
+		- Count of comments by survey period
+	- `Contacts` tab:
+		- Number of Reporting Units with contacts
+		- Total number of contacts
+		- Count of contacts by survey scope (`General` and survey code)
 
 ## Screenshots
 

@@ -120,6 +120,11 @@ erDiagram
 - Search and Show Comments include a `Show Contact Information` radio toggle (`No`/`Yes`)
 - Contact details render in compact read-only mode when `Show Contact Information` is `Yes` and a contact name is present
 - When a contact is shown, the UI displays Name, Telephone, and Email; missing telephone/email values are shown as `Not provided`
+- Top-level `Contact Management` page supports:
+	- RUREF-filtered contact search
+	- Show all contacts
+	- Full contact details shown within each RUREF and ordered by survey (General first)
+	- Edit links for each contact
 - If a contact already exists for the same reporting unit and scope, users are redirected to edit the existing contact instead of creating another
 - Contact editing is available to all authenticated users
 - Admin survey metadata supports create, update, activate/deactivate, and complete delete (with confirmation)
@@ -429,6 +434,9 @@ pytest
 - If you see `ModuleNotFoundError: No module named 'alembic'` when starting the app, install dependencies for the environment you're using:
 	- `.venv`: `uv pip install -r requirements.txt`
 	- conda: `pip install -r requirements.txt`
+- If contact details are not appearing in search/results views:
+	- Ensure `Show Contact Information` is set to `Yes`.
+	- Contact blocks are shown when contact name is present; telephone/email may display as `Not provided` if those fields are blank.
 - If `uv run alembic upgrade head` fails with `Failed to spawn: alembic`, it usually means Alembic isn't installed in that environment (same fix as above).
 - If startup fails after pulling schema changes, run migrations manually in the same terminal session as the app:
 	- `set -a && source .env && set +a`

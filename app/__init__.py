@@ -20,6 +20,13 @@ from .seed import seed_reference_data
 LOCAL_ENVS = {"dev", "development", "local", "test"}
 
 
+def _should_run_alembic_for_local(app_env: str, database_url: str) -> bool:
+    if app_env == "test":
+        return False
+
+    return database_url != "sqlite:///:memory:"
+
+
 def _run_alembic_upgrade(database_url: str) -> None:
     project_root = Path(__file__).resolve().parent.parent
     alembic_ini = project_root / "alembic.ini"
@@ -79,6 +86,15 @@ def create_app() -> Flask:
             "auth_mode": app.config["AUTH_MODE"],
         }
 
+    @app.after_request
+    def disable_cache_for_html(response):
+        # Dynamic pages should not be cached to avoid stale UI state across refresh/navigation.
+        if response.mimetype == "text/html":
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        return response
+
     @app.template_filter("uk_datetime")
     def uk_datetime_filter(value: datetime | None) -> str:
         if value is None:
@@ -106,6 +122,8 @@ def create_app() -> Flask:
 
     with app.app_context():
         if app.config["APP_ENV"] in LOCAL_ENVS:
+            if _should_run_alembic_for_local(app.config["APP_ENV"], app.config["SQLALCHEMY_DATABASE_URI"]):
+                _run_alembic_upgrade(app.config["SQLALCHEMY_DATABASE_URI"])
             db.create_all()
             seed_reference_data()
         else:

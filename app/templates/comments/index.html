@@ -1,6 +1,17 @@
 {% extends "base.html" %}
 {% block title %}Search and Add | Contributor Comments{% endblock %}
 
+{% block extra_css %}
+    {{ super() }}
+    {% if not show_contacts %}
+    <style>
+        .comment-contact-compact {
+            display: none !important;
+        }
+    </style>
+    {% endif %}
+{% endblock %}
+
 {% block content %}
 <header class="ons-page-header">
     <p class="ons-page-lead">Search comments by RU reference, survey, and text. Add new comments below.</p>
@@ -75,6 +86,17 @@
                     </div>
                 </div>
                 <div class="col-12">
+                    <label class="form-label d-block mb-2">Show Contact Information</label>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="show_contacts" id="show-contacts-no" value="0" {% if not show_contacts %}checked{% endif %}>
+                        <label class="form-check-label" for="show-contacts-no">No</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="show_contacts" id="show-contacts-yes" value="1" {% if show_contacts %}checked{% endif %}>
+                        <label class="form-check-label" for="show-contacts-yes">Yes</label>
+                    </div>
+                </div>
+                <div class="col-12">
                     <button class="btn btn-primary" type="submit">Run Search</button>
                     <button class="btn btn-outline-secondary" type="submit" name="show_comments" value="1">Show Comments (Testing)</button>
                 </div>
@@ -91,14 +113,26 @@
                         <h3 class="h5">RUREF {{ result_ruref }}</h3>
                         {% for survey_code, survey_comments in grouped_comments.items() %}
                         <section class="mb-3">
-                            <h4 class="h6 mt-3">Survey {{ survey_code }}</h4>
+                            <h4 class="h6 mt-3">{% if survey_code == 'General' %}General{% else %}Survey {{ survey_code }}{% endif %}</h4>
                             {% for comment in survey_comments %}
                             <article class="comment-card">
                                 <p class="comment-period"><strong>{{ comment.period }}</strong></p>
                                 <p class="comment-body">{{ comment.comment_text }}</p>
+                                {% if show_contacts %}
+                                {% set scope_contacts = contacts_by_ruref.get(comment.ruref, {}) %}
+                                {% set contact = scope_contacts.get(contact_key_for_comment(comment)) %}
+                                {% if contact_has_display_name(contact) %}
+                                <div class="comment-contact-compact">
+                                    <strong>Contact:</strong>
+                                    <span>Name: {{ contact.name }}</span>
+                                    <span>Telephone: {{ contact.telephone_number or 'Not provided' }}</span>
+                                    <span>Email: {{ contact.email_address or 'Not provided' }}</span>
+                                </div>
+                                {% endif %}
+                                {% endif %}
                                 <p class="comment-meta">
-                                    <span data-bs-toggle="tooltip" title="Created {{ comment.created_at | uk_datetime }} UTC->UK">{{ comment.author.full_name }}</span>
-                                    <a class="ms-2" href="{{ url_for('comments.ruref_detail', ruref=comment.ruref) }}">View RUREF</a>
+                                    <span data-bs-toggle="tooltip" title="Created {{ comment.created_at | uk_datetime }} UTC->UK">Author: {{ comment.author.full_name }}</span>
+                                    <a class="ms-2" href="{{ url_for('comments.ruref_detail', ruref=comment.ruref, show_contacts='1' if show_contacts else '0') }}">View RUREF</a>
                                 </p>
                             </article>
                             {% endfor %}
@@ -111,7 +145,7 @@
                 {% endif %}
             {% elif grouped_results %}
                 {% for survey_code, survey_comments in grouped_results.items() %}
-                <h3 class="h5 mt-3">Survey {{ survey_code }}</h3>
+                <h3 class="h5 mt-3">{% if survey_code == 'General' %}General{% else %}Survey {{ survey_code }}{% endif %}</h3>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle search-results-table">
                         <colgroup>
@@ -135,11 +169,25 @@
                             <tr>
                                 <td>{{ comment.period }}</td>
                                 <td>{{ comment.ruref }}</td>
-                                <td>{{ comment.comment_text | highlight_term(q) }}</td>
                                 <td>
-                                    <span data-bs-toggle="tooltip" title="{{ comment.created_at | uk_datetime }}">{{ comment.author.full_name }}</span>
+                                    {{ comment.comment_text | highlight_term(q) }}
+                                    {% if show_contacts %}
+                                    {% set scope_contacts = contacts_by_ruref.get(comment.ruref, {}) %}
+                                    {% set contact = scope_contacts.get(contact_key_for_comment(comment)) %}
+                                    {% if contact_has_display_name(contact) %}
+                                    <div class="comment-contact-compact mt-1">
+                                        <strong>Contact:</strong>
+                                        <span>Name: {{ contact.name }}</span>
+                                        <span>Telephone: {{ contact.telephone_number or 'Not provided' }}</span>
+                                        <span>Email: {{ contact.email_address or 'Not provided' }}</span>
+                                    </div>
+                                    {% endif %}
+                                    {% endif %}
                                 </td>
-                                <td><a href="{{ url_for('comments.ruref_detail', ruref=comment.ruref) }}">View RUREF</a></td>
+                                <td>
+                                    <span data-bs-toggle="tooltip" title="{{ comment.created_at | uk_datetime }}">Author: {{ comment.author.full_name }}</span>
+                                </td>
+                                <td><a href="{{ url_for('comments.ruref_detail', ruref=comment.ruref, show_contacts='1' if show_contacts else '0') }}">View RUREF</a></td>
                             </tr>
                         {% endfor %}
                         </tbody>
@@ -158,11 +206,19 @@
             <h2 class="ons-section-title">Add Comment</h2>
             <form method="post" action="{{ url_for('comments.create_comment') }}">
                 <div class="row g-3">
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="1" id="is-general" name="is_general" data-general-comment-toggle>
+                            <label class="form-check-label" for="is-general">
+                                General comment (not tied to one survey)
+                            </label>
+                        </div>
+                    </div>
                     <div class="col-md-4">
                         <label class="form-label" for="new-ruref">RUREF</label>
                         <input class="form-control" type="text" id="new-ruref" name="ruref" maxlength="11" required>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-4" data-survey-input-wrap>
                         <label class="form-label" for="new-survey">Survey</label>
                         <select class="form-select" id="new-survey" name="survey" required>
                             <option value="">Select survey</option>
@@ -180,6 +236,22 @@
                         <textarea class="form-control" id="new-comment" name="comment" rows="4" required></textarea>
                     </div>
                     <div class="col-12">
+                        <h3 class="h6 mb-2">Contact (optional)</h3>
+                        <p class="text-muted small mb-2">Only enter contact details if no contact exists yet for this RUREF and survey.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="contact-name">Name</label>
+                        <input class="form-control" type="text" id="contact-name" name="contact_name" maxlength="120">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="contact-phone">Telephone</label>
+                        <input class="form-control" type="text" id="contact-phone" name="contact_phone" maxlength="50">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="contact-email">Email</label>
+                        <input class="form-control" type="email" id="contact-email" name="contact_email" maxlength="255">
+                    </div>
+                    <div class="col-12">
                         <button class="btn btn-primary" type="submit">Save Comment</button>
                     </div>
                 </div>
@@ -193,7 +265,52 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const params = new URLSearchParams(window.location.search);
+    const showContactsEnabled = params.get('show_contacts') === '1';
+    if (!showContactsEnabled) {
+        document.querySelectorAll('.comment-contact-compact').forEach(function (element) {
+            element.remove();
+        });
+    }
+
+    const showContactsRadios = Array.from(document.querySelectorAll('input[name="show_contacts"]'));
+    const searchHasResults = {{ 'true' if search_performed else 'false' }};
+
+    if (searchHasResults && showContactsRadios.length) {
+        showContactsRadios.forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                const url = new URL(window.location.href);
+                url.searchParams.set('show_contacts', radio.value);
+                window.location.assign(url.toString());
+            });
+        });
+    }
+
     const picker = document.querySelector('[data-survey-picker]');
+    const generalToggle = document.querySelector('[data-general-comment-toggle]');
+    const surveyInputWrap = document.querySelector('[data-survey-input-wrap]');
+    const surveySelect = document.getElementById('new-survey');
+
+    function syncGeneralToggleState() {
+        if (!generalToggle || !surveyInputWrap || !surveySelect) {
+            return;
+        }
+
+        if (generalToggle.checked) {
+            surveyInputWrap.style.display = 'none';
+            surveySelect.required = false;
+            surveySelect.value = '';
+        } else {
+            surveyInputWrap.style.display = '';
+            surveySelect.required = true;
+        }
+    }
+
+    if (generalToggle) {
+        generalToggle.addEventListener('change', syncGeneralToggleState);
+        syncGeneralToggleState();
+    }
+
     if (!picker) {
         return;
     }

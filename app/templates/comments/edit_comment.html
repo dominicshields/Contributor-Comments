@@ -9,7 +9,7 @@
 
 <div class="ons-panel mb-4">
     <p><strong>RUREF:</strong> {{ comment.ruref }}</p>
-    <p><strong>Survey:</strong> {{ comment.survey_code }}</p>
+    <p><strong>Scope:</strong> {% if comment.is_general %}General{% else %}Survey {{ comment.survey_code }}{% endif %}</p>
     <p><strong>Period:</strong> {{ comment.period }}</p>
     <form method="post">
         <div class="mb-3">

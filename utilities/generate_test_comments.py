@@ -55,6 +55,13 @@ class SurveyMetadata:
     periodicity: str
 
 
+@dataclass
+class RurefState:
+    survey_history: list[tuple[str, str]]
+    should_emit_general: bool
+    emitted_general: bool
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Generate synthetic test comments based on survey metadata periodicity rules."
@@ -156,6 +163,37 @@ def build_author_pool(fake: Faker, max_names: int = 100) -> list[str]:
     return sorted(names)
 
 
+def attach_contact_details(records: list[dict[str, str]], fake: Faker) -> None:
+    for record in records:
+        record["contact_name"] = ""
+        record["contact_phone"] = ""
+        record["contact_email"] = ""
+
+    if not records:
+        return
+
+    target_contact_rows = len(records) // 3
+    if target_contact_rows == 0:
+        return
+
+    first_record_index_by_contact_scope: dict[tuple[str, str], int] = {}
+    for index, record in enumerate(records):
+        contact_scope = (record["ruref"], record["survey_code"])
+        if contact_scope not in first_record_index_by_contact_scope:
+            first_record_index_by_contact_scope[contact_scope] = index
+
+    unique_scopes = list(first_record_index_by_contact_scope.keys())
+    random.shuffle(unique_scopes)
+    selected_scopes = unique_scopes[: min(target_contact_rows, len(unique_scopes))]
+
+    for scope in selected_scopes:
+        record_index = first_record_index_by_contact_scope[scope]
+        record = records[record_index]
+        record["contact_name"] = fake.name()
+        record["contact_phone"] = fake.phone_number()
+        record["contact_email"] = fake.email()
+
+
 def generate_comments(comment_count: int, surveys: list[SurveyMetadata]) -> list[dict[str, str]]:
     if comment_count < 0:
         raise ValueError("comment_count must be zero or greater")
@@ -166,8 +204,9 @@ def generate_comments(comment_count: int, surveys: list[SurveyMetadata]) -> list
         survey.code: build_valid_periods(survey.code, survey.periodicity)
         for survey in surveys
     }
-    survey_lookup = {survey.code: survey for survey in surveys}
-    ruref_history: dict[str, list[tuple[str, str]]] = {}
+    ruref_states: dict[str, RurefState] = {}
+    general_periods = [f"{year}{month:02d}" for year in range(2020, 2026) for month in range(1, 13)]
+    new_ruref_count = 0
 
     def choose_period(code: str, avoid_period: str | None = None) -> str | None:
         valid_periods = period_map.get(code, [])
@@ -183,34 +222,50 @@ def generate_comments(comment_count: int, surveys: list[SurveyMetadata]) -> list
 
     records: list[dict[str, str]] = []
     for index in range(1, comment_count + 1):
-        use_existing_ruref = bool(ruref_history) and random.random() < 0.5
+        use_existing_ruref = bool(ruref_states) and random.random() < 0.5
 
         if use_existing_ruref:
-            ruref = random.choice(list(ruref_history.keys()))
-            last_survey_code, last_period = ruref_history[ruref][-1]
-
-            keep_same_survey = random.random() < 0.1
-            if keep_same_survey:
-                survey_code = last_survey_code
-            else:
-                candidate_codes = [survey.code for survey in surveys if survey.code != last_survey_code]
-                if candidate_codes:
-                    survey_code = random.choice(candidate_codes)
-                else:
-                    survey_code = last_survey_code
-
-            period = choose_period(survey_code, avoid_period=last_period)
-            if period is None:
-                continue
+            ruref = random.choice(list(ruref_states.keys()))
         else:
             ruref = fake.numerify(text="###########")
-            survey = random.choice(surveys)
-            survey_code = survey.code
-            period = choose_period(survey_code)
-            if period is None:
-                continue
+            new_ruref_count += 1
+            ruref_states[ruref] = RurefState(
+                survey_history=[],
+                should_emit_general=(new_ruref_count % 5 == 0),
+                emitted_general=False,
+            )
 
-        survey = survey_lookup[survey_code]
+        ruref_state = ruref_states[ruref]
+        emit_general_comment = ruref_state.should_emit_general and not ruref_state.emitted_general
+
+        if emit_general_comment:
+            survey_code = ""
+            period = random.choice(general_periods)
+            ruref_state.emitted_general = True
+        else:
+            if ruref_state.survey_history:
+                last_survey_code, last_period = ruref_state.survey_history[-1]
+
+                keep_same_survey = random.random() < 0.1
+                if keep_same_survey:
+                    survey_code = last_survey_code
+                else:
+                    candidate_codes = [survey.code for survey in surveys if survey.code != last_survey_code]
+                    if candidate_codes:
+                        survey_code = random.choice(candidate_codes)
+                    else:
+                        survey_code = last_survey_code
+
+                period = choose_period(survey_code, avoid_period=last_period)
+                if period is None:
+                    continue
+            else:
+                survey = random.choice(surveys)
+                survey_code = survey.code
+                period = choose_period(survey_code)
+                if period is None:
+                    continue
+
         spoke_to = fake.name()
         comment_text = f"Spoke to {spoke_to} they said {fake.sentence(nb_words=14)}"
         if index % 10 == 0:
@@ -225,10 +280,14 @@ def generate_comments(comment_count: int, surveys: list[SurveyMetadata]) -> list
                 "comment_text": comment_text,
                 "saved_at": saved_at.strftime("%Y-%m-%d %H:%M:%S"),
                 "author_name": random.choice(authors),
+                "is_general": "1" if emit_general_comment else "0",
             }
         )
 
-        ruref_history.setdefault(ruref, []).append((survey_code, period))
+        if survey_code:
+            ruref_state.survey_history.append((survey_code, period))
+
+    attach_contact_details(records, fake)
 
     return records
 
@@ -243,6 +302,10 @@ def write_output(records: list[dict[str, str]], output_path: Path) -> None:
         "comment_text",
         "saved_at",
         "author_name",
+        "is_general",
+        "contact_name",
+        "contact_phone",
+        "contact_email",
     ]
 
     with output_path.open("w", newline="", encoding="utf-8") as csv_file:

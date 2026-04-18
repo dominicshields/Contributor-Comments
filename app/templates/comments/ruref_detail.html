@@ -1,6 +1,17 @@
 {% extends "base.html" %}
 {% block title %}RUREF {{ ruref }} | Contributor Comments{% endblock %}
 
+{% block extra_css %}
+    {{ super() }}
+    {% if not show_contacts %}
+    <style>
+        .comment-contact-compact {
+            display: none !important;
+        }
+    </style>
+    {% endif %}
+{% endblock %}
+
 {% block content %}
 <header class="ons-page-header">
     <h1 class="ons-page-title">Reporting Unit Reference {{ ruref }}</h1>
@@ -16,18 +27,60 @@
         </div>
         <div class="col-md-5">
             <label class="form-label">Surveys</label>
-            <div class="ons-checkbox-grid">
-                {% for survey in surveys %}
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="surveys" value="{{ survey.code }}" id="ruref-survey-{{ survey.code }}" {% if survey.code in selected_surveys %}checked{% endif %}>
-                    <label class="form-check-label" for="ruref-survey-{{ survey.code }}">{{ survey.code }}</label>
+            <div class="survey-picker" data-survey-picker>
+                <button
+                    class="btn btn-outline-secondary w-100 d-flex justify-content-between align-items-center"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#ruref-survey-picker-panel"
+                    aria-expanded="false"
+                    aria-controls="ruref-survey-picker-panel"
+                >
+                    <span>Choose surveys</span>
+                    <span class="badge text-bg-secondary" data-survey-selected-count>{{ selected_surveys|length }} selected</span>
+                </button>
+
+                <div class="collapse mt-2" id="ruref-survey-picker-panel">
+                    <div class="survey-picker-panel">
+                        <div class="d-flex gap-2 mb-2">
+                            <button class="btn btn-sm btn-outline-primary" type="button" data-select-all-surveys>Select all</button>
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-clear-all-surveys>Clear</button>
+                        </div>
+
+                        <input
+                            class="form-control form-control-sm mb-2"
+                            type="text"
+                            placeholder="Filter survey codes"
+                            aria-label="Filter survey codes"
+                            data-survey-filter
+                        >
+
+                        <div class="survey-picker-list" data-survey-list>
+                            {% for survey in surveys %}
+                            <div class="form-check" data-survey-item>
+                                <input class="form-check-input" type="checkbox" name="surveys" value="{{ survey.code }}" id="ruref-survey-{{ survey.code }}" {% if survey.code in selected_surveys %}checked{% endif %} data-survey-checkbox>
+                                <label class="form-check-label" for="ruref-survey-{{ survey.code }}">{{ survey.code }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
-                {% endfor %}
+            </div>
+        </div>
+        <div class="col-12">
+            <label class="form-label d-block mb-2">Show Contact Information</label>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="show_contacts" id="ruref-show-contacts-no" value="0" {% if not show_contacts %}checked{% endif %}>
+                <label class="form-check-label" for="ruref-show-contacts-no">No</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="show_contacts" id="ruref-show-contacts-yes" value="1" {% if show_contacts %}checked{% endif %}>
+                <label class="form-check-label" for="ruref-show-contacts-yes">Yes</label>
             </div>
         </div>
         <div class="col-12">
             <button class="btn btn-primary" type="submit">Apply Filters</button>
-            <a class="btn btn-outline-secondary" href="{{ url_for('comments.ruref_detail', ruref=ruref) }}">Clear</a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('comments.ruref_detail', ruref=ruref, show_contacts='1' if show_contacts else '0') }}">Clear</a>
         </div>
     </form>
 </div>
@@ -35,13 +88,24 @@
 {% if grouped_comments %}
     {% for survey_code, survey_comments in grouped_comments.items() %}
     <section class="ons-panel mb-4">
-        <h2 class="ons-section-title">Survey {{ survey_code }}</h2>
+        <h2 class="ons-section-title">{% if survey_code == 'General' %}General{% else %}Survey {{ survey_code }}{% endif %}</h2>
         {% for comment in survey_comments %}
         <article class="comment-card">
             <p class="comment-period"><strong>{{ comment.period }}</strong></p>
             <p class="comment-body">{{ comment.comment_text }}</p>
+            {% set contact_key = contact_key_for_comment(comment) %}
+            {% set contact = contacts_by_survey.get(contact_key) %}
+            {% if show_contacts and contact_has_display_name(contact) %}
+            <div class="comment-contact-compact">
+                <strong>Contact:</strong>
+                <span>Name: {{ contact.name }}</span>
+                <span>Telephone: {{ contact.telephone_number or 'Not provided' }}</span>
+                <span>Email: {{ contact.email_address or 'Not provided' }}</span>
+                <a href="{{ url_for('comments.edit_contact', contact_id=contact.id) }}">Edit contact</a>
+            </div>
+            {% endif %}
             <p class="comment-meta">
-                <span data-bs-toggle="tooltip" title="Created {{ comment.created_at | uk_datetime }} UTC->UK">{{ comment.author.full_name }}</span>
+                <span data-bs-toggle="tooltip" title="Created {{ comment.created_at | uk_datetime }} UTC->UK">Author: {{ comment.author.full_name }}</span>
                 <a class="ms-2" href="{{ url_for('comments.edit_comment', comment_id=comment.id) }}">Edit</a>
             </p>
         </article>
@@ -53,4 +117,75 @@
         <p class="mb-0">No comments found for this RUREF and filters.</p>
     </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const params = new URLSearchParams(window.location.search);
+    const showContactsEnabled = params.get('show_contacts') === '1';
+    if (!showContactsEnabled) {
+        document.querySelectorAll('.comment-contact-compact').forEach(function (element) {
+            element.remove();
+        });
+    }
+
+    const picker = document.querySelector('[data-survey-picker]');
+    if (!picker) {
+        return;
+    }
+
+    const filterInput = picker.querySelector('[data-survey-filter]');
+    const selectAllButton = picker.querySelector('[data-select-all-surveys]');
+    const clearAllButton = picker.querySelector('[data-clear-all-surveys]');
+    const checkboxes = Array.from(picker.querySelectorAll('[data-survey-checkbox]'));
+    const items = Array.from(picker.querySelectorAll('[data-survey-item]'));
+    const countBadge = picker.querySelector('[data-survey-selected-count]');
+
+    function updateCount() {
+        const selectedCount = checkboxes.filter(function (checkbox) {
+            return checkbox.checked;
+        }).length;
+        countBadge.textContent = selectedCount + ' selected';
+    }
+
+    function visibleItems() {
+        return items.filter(function (item) {
+            return item.style.display !== 'none';
+        });
+    }
+
+    filterInput.addEventListener('input', function () {
+        const query = filterInput.value.trim().toLowerCase();
+        items.forEach(function (item) {
+            const label = item.querySelector('label');
+            const text = label ? label.textContent.toLowerCase() : '';
+            item.style.display = text.includes(query) ? '' : 'none';
+        });
+    });
+
+    selectAllButton.addEventListener('click', function () {
+        visibleItems().forEach(function (item) {
+            const checkbox = item.querySelector('[data-survey-checkbox]');
+            if (checkbox) {
+                checkbox.checked = true;
+            }
+        });
+        updateCount();
+    });
+
+    clearAllButton.addEventListener('click', function () {
+        checkboxes.forEach(function (checkbox) {
+            checkbox.checked = false;
+        });
+        updateCount();
+    });
+
+    checkboxes.forEach(function (checkbox) {
+        checkbox.addEventListener('change', updateCount);
+    });
+
+    updateCount();
+});
+</script>
 {% endblock %}

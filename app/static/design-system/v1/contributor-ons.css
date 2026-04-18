@@ -176,6 +176,16 @@ a:focus {
     font-size: 0.95rem;
 }
 
+.comment-contact-compact {
+    margin-bottom: 0.35rem;
+    font-size: 0.9rem;
+    color: #3e3e3e;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    align-items: baseline;
+}
+
 .table thead th {
     color: var(--ons-blue-alt);
 }

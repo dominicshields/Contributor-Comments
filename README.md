@@ -25,11 +25,19 @@ Contributor Comments is a Flask + Jinja application for capturing and searching 
 - `comments`
 	- `id` (PK)
 	- `ruref` (FK to reporting_units)
-	- `survey_code` (FK to surveys)
+	- `survey_code` (FK to surveys, nullable for general comments)
+	- `is_general` (bool flag for comments not tied to one survey)
 	- `period` (YYYYMM)
 	- `comment_text`
 	- `author_id` (FK to users)
 	- `created_at` (UTC)
+- `contacts`
+	- `id` (PK)
+	- `ruref` (FK to reporting_units)
+	- `survey_code` (FK to surveys, nullable for general contact)
+	- `name`
+	- `telephone_number`
+	- `email_address`
 - `comment_edits`
 	- Tracks editor, edit timestamp, previous text, and new text
 - `users`
@@ -104,9 +112,30 @@ erDiagram
 - Search tab includes `Show Comments (Testing)` to load the lowest 10 RUREFs with comments, grouped in the usual survey order
 - Search results are shown only after a search is performed
 - RUREF detail page groups comments by survey in configured survey order, with descending period order
-- Author displayed after comment with created timestamp on hover tooltip
+- General comments are supported and appear before survey-specific comments in grouped results
+- Search filtered to one or more surveys still includes general comments
+- Author is displayed as `Author: <name>` after each comment, with created timestamp on hover tooltip
 - Comment edits are recorded in a true edit history table
+- Optional contacts are supported at reporting-unit + survey scope, plus reporting-unit + general scope
+- Search and Show Comments include a `Show Contact Information` radio toggle (`No`/`Yes`)
+- Contact details render in compact read-only mode when `Show Contact Information` is `Yes` and a contact name is present
+- When a contact is shown, the UI displays Name, Telephone, and Email; missing telephone/email values are shown as `Not provided`
+- If a contact already exists for the same reporting unit and scope, users are redirected to edit the existing contact instead of creating another
+- Contact editing is available to all authenticated users
 - Admin survey metadata supports create, update, activate/deactivate, and complete delete (with confirmation)
+
+### Recent Behavior Changes
+
+- Contact and author display labels are explicit in comment results:
+	- `Author: <name>`
+	- `Contact: Name, Telephone, Email`
+- Contact blocks are controlled by `Show Contact Information`:
+	- `No`: no contact block is shown
+	- `Yes`: contact block is shown when contact name is present; telephone/email show `Not provided` when missing
+- Contact visibility behavior is consistent across:
+	- Search Results
+	- Show Comments (Testing)
+	- RUREF detail page
 
 ### Import Surveys (Admin)
 
@@ -133,23 +162,27 @@ CSV columns:
 
 - Required:
 	- `ruref`
-	- `survey_code`
 	- `period`
 	- `comment_text`
 - Optional:
+	- `survey_code`
+	- `is_general`
 	- `author_name`
 	- `saved_at` (accepted formats: `YYYY-MM-DD HH:MM:SS`, `YYYY-MM-DDTHH:MM:SS`, `YYYY-MM-DD`)
 
 Import rules:
 
 - `ruref` must be exactly 11 numeric characters.
-- `survey_code` must exist and be active in Survey Metadata.
-- `period` must be valid `YYYYMM` and match survey periodicity rules:
+- `period` must be valid `YYYYMM`.
+- Survey-specific rows require `survey_code` to exist and be active in Survey Metadata.
+- Survey-specific rows must match survey periodicity rules:
 	- Monthly: any month
 	- Quarterly: `03`, `06`, `09`, `12`
 	- Annual: `12`
 	- Other: `12`
 	- Exception: survey `141` requires month `04`
+- General comment rows can be supplied either by leaving `survey_code` blank or by setting `is_general` to a truthy value (`1`, `true`, `yes`, `y`).
+- General comment rows are imported with no survey code and are not checked against survey periodicity metadata.
 - Missing reporting units are created automatically.
 - If `author_name` is provided, the importer reuses or creates a user record for that name.
 - Rows failing validation are skipped.
@@ -350,7 +383,8 @@ python -m alembic upgrade head
 
 Environment behavior:
 
-- `APP_ENV=dev|development|local|test`: uses `db.create_all()` and seeds local survey/test-user data.
+- `APP_ENV=dev|development|local`: runs `alembic upgrade head` at startup, then uses `db.create_all()` and seeds local survey/test-user data.
+- `APP_ENV=test`: uses `db.create_all()` and seeds local survey/test-user data.
 - Any other `APP_ENV` value: runs `alembic upgrade head` at startup and does not auto-seed local test users.
 
 Authentication behavior:
@@ -396,6 +430,10 @@ pytest
 	- `.venv`: `uv pip install -r requirements.txt`
 	- conda: `pip install -r requirements.txt`
 - If `uv run alembic upgrade head` fails with `Failed to spawn: alembic`, it usually means Alembic isn't installed in that environment (same fix as above).
+- If startup fails after pulling schema changes, run migrations manually in the same terminal session as the app:
+	- `set -a && source .env && set +a`
+	- `uv run python -m alembic upgrade head`
+- If your local database was partially updated by an older local startup path, rerunning `uv run python -m alembic upgrade head` should reconcile it without dropping the database.
 
 ## Infrastructure Scaffolding
 

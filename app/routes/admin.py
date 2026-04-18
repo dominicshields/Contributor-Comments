@@ -14,7 +14,7 @@ from sqlalchemy import distinct
 from werkzeug.security import generate_password_hash
 
 from ..extensions import db
-from ..models import Comment, CommentEdit, ReportingUnit, Survey, User
+from ..models import Comment, CommentEdit, Contact, ReportingUnit, Survey, User
 from ..validation import ALLOWED_SURVEY_PERIODICITIES, is_valid_period, is_valid_ruref, is_valid_survey_periodicity
 
 
@@ -305,13 +305,17 @@ def delete_survey(code: str):
     ]
 
     deleted_comments = 0
+    deleted_contacts = Contact.query.filter(Contact.survey_code == code).delete(synchronize_session=False)
     if comment_ids:
         CommentEdit.query.filter(CommentEdit.comment_id.in_(comment_ids)).delete(synchronize_session=False)
         deleted_comments = Comment.query.filter(Comment.survey_code == code).delete(synchronize_session=False)
 
     db.session.delete(survey)
     db.session.commit()
-    flash(f"Survey {code} deleted completely. Removed {deleted_comments} related comments.", "success")
+    flash(
+        f"Survey {code} deleted completely. Removed {deleted_comments} related comments and {deleted_contacts} related contacts.",
+        "success",
+    )
     return redirect(url_for("admin.surveys"))
 
 
@@ -404,11 +408,11 @@ def bulk_upload_comments_submit():
         return redirect(url_for("admin.bulk_upload_comments"))
 
     reader = csv.DictReader(io.StringIO(content))
-    required_columns = {"ruref", "survey_code", "period", "comment_text"}
+    required_columns = {"ruref", "period", "comment_text"}
     columns = {column.strip().lower() for column in (reader.fieldnames or [])}
     if not required_columns.issubset(columns):
         flash(
-            "CSV must include columns: ruref, survey_code, period, comment_text.",
+            "CSV must include columns: ruref, period, comment_text.",
             "error",
         )
         return redirect(url_for("admin.bulk_upload_comments"))
@@ -425,20 +429,35 @@ def bulk_upload_comments_submit():
         period = row_normalized.get("period", "")
         comment_text = row_normalized.get("comment_text", "")
         author_name = row_normalized.get("author_name", "")
+        contact_name = row_normalized.get("contact_name", "")
+        contact_phone = row_normalized.get("contact_phone", "")
+        contact_email = row_normalized.get("contact_email", "")
+        is_general_raw = row_normalized.get("is_general", "")
+        is_general = is_general_raw.lower() in {"1", "true", "yes", "y"}
         saved_at = _parse_saved_at(row_normalized.get("saved_at", ""))
+
+        # Treat empty survey codes as general comments for easier CSV authoring.
+        if survey_code == "":
+            is_general = True
 
         if not is_valid_ruref(ruref) or not comment_text:
             skipped += 1
             continue
 
-        survey = db.session.get(Survey, survey_code)
-        if survey is None or not survey.is_active:
+        if not is_valid_period(period):
             skipped += 1
             continue
 
-        if not _is_period_allowed_for_survey(survey, period):
-            skipped += 1
-            continue
+        survey = None
+        if not is_general:
+            survey = db.session.get(Survey, survey_code)
+            if survey is None or not survey.is_active:
+                skipped += 1
+                continue
+
+            if not _is_period_allowed_for_survey(survey, period):
+                skipped += 1
+                continue
 
         reporting_unit = db.session.get(ReportingUnit, ruref)
         if reporting_unit is None:
@@ -449,7 +468,8 @@ def bulk_upload_comments_submit():
 
         comment = Comment(
             ruref=ruref,
-            survey_code=survey_code,
+            survey_code=survey_code if not is_general else None,
+            is_general=is_general,
             period=period,
             comment_text=comment_text,
             author_id=author.id,
@@ -459,6 +479,29 @@ def bulk_upload_comments_submit():
             comment.updated_at = saved_at
 
         db.session.add(comment)
+
+        if contact_name or contact_phone or contact_email:
+            contact_scope = survey_code if not is_general else None
+            existing_contact = Contact.query.filter_by(ruref=ruref, survey_code=contact_scope).first()
+
+            if existing_contact is None:
+                db.session.add(
+                    Contact(
+                        ruref=ruref,
+                        survey_code=contact_scope,
+                        name=contact_name,
+                        telephone_number=contact_phone,
+                        email_address=contact_email,
+                    )
+                )
+            else:
+                if contact_name:
+                    existing_contact.name = contact_name
+                if contact_phone:
+                    existing_contact.telephone_number = contact_phone
+                if contact_email:
+                    existing_contact.email_address = contact_email
+
         created += 1
 
     db.session.commit()
@@ -521,12 +564,16 @@ def delete_all_comments_submit():
     if not _ensure_admin():
         return redirect(url_for("comments.index"))
 
+    deleted_contacts = Contact.query.delete(synchronize_session=False)
     deleted_edits = CommentEdit.query.delete(synchronize_session=False)
     deleted_comments = Comment.query.delete(synchronize_session=False)
     db.session.commit()
 
     flash(
-        f"All comments deleted. Removed {deleted_comments} comments and {deleted_edits} comment edits.",
+        (
+            f"All comments deleted. Removed {deleted_comments} comments, "
+            f"{deleted_edits} comment edits, and {deleted_contacts} contacts."
+        ),
         "success",
     )
     return redirect(url_for("admin.delete_all_comments_page"))

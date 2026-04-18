@@ -4,7 +4,7 @@ import io
 from datetime import UTC, datetime
 
 from app.extensions import db
-from app.models import Comment, CommentEdit, ReportingUnit, Survey, User
+from app.models import Comment, CommentEdit, Contact, ReportingUnit, Survey, User
 
 
 def test_system_config_menu_includes_bulk_upload_for_admin(client, login_admin):
@@ -78,6 +78,107 @@ def test_bulk_upload_comments_imports_valid_rows_and_skips_invalid(client, login
         assert comments[0].period == "202312"
 
 
+def test_bulk_upload_comments_imports_general_rows_with_is_general_flag(client, login_admin, app):
+    csv_text = "\n".join(
+        [
+            "ruref,period,comment_text,is_general,survey_code,author_name,saved_at",
+            "12345678911,202312,General comment with flag,1,,Analyst Bulk,2024-01-15 10:00:00",
+        ]
+    )
+
+    response = client.post(
+        "/admin/system-config/bulk-upload-comments",
+        data={"comments_file": (io.BytesIO(csv_text.encode("utf-8")), "upload.csv")},
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Bulk upload complete. Added 1 comments in " in response.data
+
+    with app.app_context():
+        comments = Comment.query.filter_by(ruref="12345678911").all()
+        assert len(comments) == 1
+        assert comments[0].is_general is True
+        assert comments[0].survey_code is None
+
+
+def test_bulk_upload_comments_treats_blank_survey_as_general_comment(client, login_admin, app):
+    csv_text = "\n".join(
+        [
+            "ruref,period,comment_text,survey_code,author_name,saved_at",
+            "12345678912,202401,General comment via blank survey,,Analyst Bulk,2024-02-10 10:00:00",
+        ]
+    )
+
+    response = client.post(
+        "/admin/system-config/bulk-upload-comments",
+        data={"comments_file": (io.BytesIO(csv_text.encode("utf-8")), "upload.csv")},
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Bulk upload complete. Added 1 comments in " in response.data
+
+    with app.app_context():
+        comments = Comment.query.filter_by(ruref="12345678912").all()
+        assert len(comments) == 1
+        assert comments[0].is_general is True
+        assert comments[0].survey_code is None
+
+
+def test_bulk_upload_comments_creates_contact_from_contact_columns(client, login_admin, app):
+    csv_text = "\n".join(
+        [
+            "ruref,survey_code,period,comment_text,contact_name,contact_phone,contact_email",
+            "12345678913,221,202312,Comment with contact,Pat Contact,07123456789,pat@example.com",
+        ]
+    )
+
+    response = client.post(
+        "/admin/system-config/bulk-upload-comments",
+        data={"comments_file": (io.BytesIO(csv_text.encode("utf-8")), "upload.csv")},
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+
+    with app.app_context():
+        contact = Contact.query.filter_by(ruref="12345678913", survey_code="221").first()
+        assert contact is not None
+        assert contact.name == "Pat Contact"
+        assert contact.telephone_number == "07123456789"
+        assert contact.email_address == "pat@example.com"
+
+
+def test_bulk_upload_comments_upserts_contact_without_duplicate_scope(client, login_admin, app):
+    csv_text = "\n".join(
+        [
+            "ruref,survey_code,period,comment_text,contact_name,contact_phone,contact_email",
+            "12345678914,221,202312,First row,Initial Name,07000000000,initial@example.com",
+            "12345678914,221,202401,Second row,Updated Name,07999999999,updated@example.com",
+        ]
+    )
+
+    response = client.post(
+        "/admin/system-config/bulk-upload-comments",
+        data={"comments_file": (io.BytesIO(csv_text.encode("utf-8")), "upload.csv")},
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+
+    with app.app_context():
+        contacts = Contact.query.filter_by(ruref="12345678914", survey_code="221").all()
+        assert len(contacts) == 1
+        assert contacts[0].name == "Updated Name"
+        assert contacts[0].telephone_number == "07999999999"
+        assert contacts[0].email_address == "updated@example.com"
+
+
 def test_delete_all_comments_removes_comments_and_edit_history(client, login_admin, app):
     with app.app_context():
         survey = db.session.get(Survey, "221")
@@ -115,10 +216,20 @@ def test_delete_all_comments_removes_comments_and_edit_history(client, login_adm
                 edited_at=datetime.now(UTC),
             )
         )
+        db.session.add(
+            Contact(
+                ruref=ruref,
+                survey_code="221",
+                name="Pat Contact",
+                telephone_number="07123456789",
+                email_address="pat@example.com",
+            )
+        )
         db.session.commit()
 
         assert Comment.query.count() >= 1
         assert CommentEdit.query.count() >= 1
+        assert Contact.query.count() >= 1
 
     response = client.post("/admin/system-config/delete-all-comments", follow_redirects=True)
     assert response.status_code == 200
@@ -127,6 +238,7 @@ def test_delete_all_comments_removes_comments_and_edit_history(client, login_adm
     with app.app_context():
         assert Comment.query.count() == 0
         assert CommentEdit.query.count() == 0
+        assert Contact.query.count() == 0
 
 
 def test_system_info_page_displays_comment_counts(client, login_admin, app):

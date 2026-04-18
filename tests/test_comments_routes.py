@@ -1,5 +1,5 @@
 from app.extensions import db
-from app.models import Comment, Survey
+from app.models import Comment, Contact, Survey
 
 
 def test_create_comment_rejects_invalid_period(client, login_analyst):
@@ -147,6 +147,30 @@ def test_show_comments_returns_lowest_ten_rurefs_grouped_for_display(client, log
     assert response.data.index(b"ruref 5 newer") < response.data.index(b"ruref 5 older")
 
 
+def test_show_comments_testing_obeys_contact_visibility_toggle(client, login_analyst):
+    client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678901",
+            "survey": "221",
+            "period": "202601",
+            "comment": "testing comments toggle",
+            "contact_name": "Pat Contact",
+            "contact_phone": "0123456789",
+            "contact_email": "pat@example.com",
+        },
+        follow_redirects=True,
+    )
+
+    response_hidden = client.get("/comments?show_comments=1&show_contacts=0", follow_redirects=True)
+    assert response_hidden.status_code == 200
+    assert b"pat@example.com" not in response_hidden.data
+
+    response_visible = client.get("/comments?show_comments=1&show_contacts=1", follow_redirects=True)
+    assert response_visible.status_code == 200
+    assert b"pat@example.com" in response_visible.data
+
+
 def test_search_tab_displays_reporting_unit_and_comment_totals(client, login_analyst):
     client.post(
         "/comments/new",
@@ -222,6 +246,80 @@ def test_comment_search_can_match_author(client, login_analyst):
     assert b"Author searchable comment." in response.data
 
 
+def test_search_results_show_contact_info_only_when_toggled_on(client, login_analyst):
+    client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678901",
+            "survey": "221",
+            "period": "202601",
+            "comment": "Comment with contact visibility toggle.",
+            "contact_name": "Pat Contact",
+            "contact_phone": "0123456789",
+            "contact_email": "pat@example.com",
+        },
+        follow_redirects=True,
+    )
+
+    response_hidden = client.get("/comments?ruref=12345678901&show_contacts=0", follow_redirects=True)
+    assert response_hidden.status_code == 200
+    assert b"pat@example.com" not in response_hidden.data
+
+    response_visible = client.get("/comments?ruref=12345678901&show_contacts=1", follow_redirects=True)
+    assert response_visible.status_code == 200
+    assert b"pat@example.com" in response_visible.data
+
+
+def test_search_results_duplicate_show_contacts_uses_last_value(client, login_analyst):
+    client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678909",
+            "survey": "221",
+            "period": "202601",
+            "comment": "Duplicate show_contacts query param behavior.",
+            "contact_name": "Pat Contact",
+            "contact_phone": "0123456789",
+            "contact_email": "pat@example.com",
+        },
+        follow_redirects=True,
+    )
+
+    response_last_zero = client.get(
+        "/comments?ruref=12345678909&show_contacts=1&show_contacts=0",
+        follow_redirects=True,
+    )
+    assert response_last_zero.status_code == 200
+    assert b"pat@example.com" not in response_last_zero.data
+
+    response_last_one = client.get(
+        "/comments?ruref=12345678909&show_contacts=0&show_contacts=1",
+        follow_redirects=True,
+    )
+    assert response_last_one.status_code == 200
+    assert b"pat@example.com" in response_last_one.data
+
+
+def test_search_results_show_name_only_contact_when_toggle_on(client, login_analyst, app):
+    client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678905",
+            "survey": "221",
+            "period": "202601",
+            "comment": "Comment with partial contact",
+            "contact_name": "Only Name",
+        },
+        follow_redirects=True,
+    )
+
+    response = client.get("/comments?ruref=12345678905&show_contacts=1", follow_redirects=True)
+    assert response.status_code == 200
+    assert b"Name: Only Name" in response.data
+    assert b"Telephone: Not provided" in response.data
+    assert b"Email: Not provided" in response.data
+
+
 def test_help_page_requires_login(client):
     response = client.get("/help", follow_redirects=True)
 
@@ -235,3 +333,161 @@ def test_help_page_visible_for_logged_in_user(client, login_analyst):
     assert response.status_code == 200
     assert b"How to use Contributor Comments day to day." in response.data
     assert b"System Config (Admin)" in response.data
+
+
+def test_general_comment_is_saved_and_grouped_before_surveys(client, login_analyst):
+    client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678901",
+            "is_general": "1",
+            "period": "202601",
+            "comment": "General context comment",
+        },
+        follow_redirects=True,
+    )
+
+    client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678901",
+            "survey": "221",
+            "period": "202601",
+            "comment": "Survey-specific comment",
+        },
+        follow_redirects=True,
+    )
+
+    response = client.get("/comments?ruref=12345678901", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"General" in response.data
+    assert response.data.index(b"General") < response.data.index(b"Survey 221")
+
+
+def test_create_comment_with_contact_creates_contact_record(client, login_analyst, app):
+    response = client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678901",
+            "survey": "221",
+            "period": "202601",
+            "comment": "Comment with contact",
+            "contact_name": "Pat Contact",
+            "contact_phone": "0123456789",
+            "contact_email": "pat@example.com",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+
+    with app.app_context():
+        contact = Contact.query.filter_by(ruref="12345678901", survey_code="221").first()
+        assert contact is not None
+        assert contact.name == "Pat Contact"
+        assert contact.telephone_number == "0123456789"
+        assert contact.email_address == "pat@example.com"
+
+
+def test_create_comment_rejects_duplicate_contact_for_same_scope(client, login_analyst, app):
+    client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678901",
+            "survey": "221",
+            "period": "202601",
+            "comment": "First",
+            "contact_name": "Pat Contact",
+            "contact_phone": "0123456789",
+            "contact_email": "pat@example.com",
+        },
+        follow_redirects=True,
+    )
+
+    response = client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678901",
+            "survey": "221",
+            "period": "202602",
+            "comment": "Second",
+            "contact_name": "Another Contact",
+            "contact_phone": "0123456790",
+            "contact_email": "another@example.com",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"A contact already exists for this reporting unit and survey 221." in response.data
+    assert b"Edit Contact" in response.data
+
+    with app.app_context():
+        contacts = Contact.query.filter_by(ruref="12345678901", survey_code="221").all()
+        assert len(contacts) == 1
+
+
+def test_edit_contact_updates_values(client, login_analyst, app):
+    client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678901",
+            "survey": "221",
+            "period": "202601",
+            "comment": "Comment with contact",
+            "contact_name": "Original",
+            "contact_phone": "0000",
+            "contact_email": "orig@example.com",
+        },
+        follow_redirects=True,
+    )
+
+    with app.app_context():
+        contact = Contact.query.filter_by(ruref="12345678901", survey_code="221").first()
+        assert contact is not None
+        contact_id = contact.id
+
+    response = client.post(
+        f"/contacts/{contact_id}/edit",
+        data={
+            "name": "Updated Name",
+            "telephone_number": "1111",
+            "email_address": "updated@example.com",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Contact updated." in response.data
+
+    with app.app_context():
+        updated = db.session.get(Contact, contact_id)
+        assert updated is not None
+        assert updated.name == "Updated Name"
+        assert updated.telephone_number == "1111"
+        assert updated.email_address == "updated@example.com"
+
+
+def test_ruref_detail_obeys_contact_toggle(client, login_analyst):
+    client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678907",
+            "survey": "221",
+            "period": "202601",
+            "comment": "RUREF detail contact toggle",
+            "contact_name": "Pat Contact",
+            "contact_phone": "0123456789",
+            "contact_email": "pat@example.com",
+        },
+        follow_redirects=True,
+    )
+
+    response_off = client.get("/ruref/12345678907?show_contacts=0", follow_redirects=True)
+    assert response_off.status_code == 200
+    assert b"pat@example.com" not in response_off.data
+
+    response_on = client.get("/ruref/12345678907?show_contacts=1", follow_redirects=True)
+    assert response_on.status_code == 200
+    assert b"pat@example.com" in response_on.data

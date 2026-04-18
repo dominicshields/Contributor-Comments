@@ -14,7 +14,7 @@ def test_system_config_menu_includes_bulk_upload_for_admin(client, login_admin):
     assert b"System Info" in response.data
     assert b"Help" in response.data
     assert b"Bulk Upload Comments" in response.data
-    assert b"Delete All Comments" in response.data
+    assert b"Delete all comments and contacts" in response.data
     assert b"Survey Metadata" in response.data
 
 
@@ -233,7 +233,7 @@ def test_delete_all_comments_removes_comments_and_edit_history(client, login_adm
 
     response = client.post("/admin/system-config/delete-all-comments", follow_redirects=True)
     assert response.status_code == 200
-    assert b"All comments deleted." in response.data
+    assert b"All comments and contacts deleted." in response.data
 
     with app.app_context():
         assert Comment.query.count() == 0

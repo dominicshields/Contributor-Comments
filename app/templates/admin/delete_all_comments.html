@@ -1,18 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Delete All Comments | Contributor Comments{% endblock %}
+{% block title %}Delete all comments and contacts | Contributor Comments{% endblock %}
 
 {% block content %}
 <header class="ons-page-header">
-    <h1 class="ons-page-title">Delete All Comments</h1>
-    <p class="ons-page-lead">Temporary testing utility to remove all comment data.</p>
+    <h1 class="ons-page-title">Delete all comments and contacts</h1>
+    <p class="ons-page-lead">Temporary testing utility to remove all comment and contact data.</p>
 </header>
 
 <div class="ons-panel">
     <p><strong>Current comments:</strong> {{ comment_count }}</p>
-    <p class="mb-3">This action deletes all records from comments and comment edit history. It cannot be undone.</p>
+    <p><strong>Important:</strong> this utility must be retired once the system is live.</p>
+    <p class="mb-3">This action deletes all records from comments, comment edit history, and contacts. It cannot be undone.</p>
 
-    <form method="post" action="{{ url_for('admin.delete_all_comments_submit') }}" onsubmit="return confirm('Delete ALL comments and comment edits? This cannot be undone.');">
-        <button class="btn btn-danger" type="submit">Delete All Comments</button>
+    <form method="post" action="{{ url_for('admin.delete_all_comments_submit') }}" onsubmit="return confirm('Delete ALL comments, comment edits, and contacts? This cannot be undone.');">
+        <button class="btn btn-danger" type="submit">Delete all comments and contacts</button>
         <a class="btn btn-outline-secondary ms-2" href="{{ url_for('comments.index') }}">Cancel</a>
     </form>
 </div>

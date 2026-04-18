@@ -587,7 +587,7 @@ def delete_all_comments_submit():
 
     flash(
         (
-            f"All comments deleted. Removed {deleted_comments} comments, "
+            f"All comments and contacts deleted. Removed {deleted_comments} comments, "
             f"{deleted_edits} comment edits, and {deleted_contacts} contacts."
         ),
         "success",

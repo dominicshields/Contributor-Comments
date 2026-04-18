@@ -107,6 +107,27 @@ def _sort_contacts_for_display(contacts: list[Contact]) -> list[Contact]:
     )
 
 
+def _contact_has_matching_comment(contact: Contact) -> bool:
+    if contact.survey_code is None:
+        return Comment.query.filter_by(ruref=contact.ruref, is_general=True).first() is not None
+
+    return Comment.query.filter_by(ruref=contact.ruref, survey_code=contact.survey_code).first() is not None
+
+
+def _cleanup_orphan_contacts() -> int:
+    orphan_ids: list[int] = []
+    for contact in Contact.query.all():
+        if not _contact_has_matching_comment(contact):
+            orphan_ids.append(contact.id)
+
+    if not orphan_ids:
+        return 0
+
+    Contact.query.filter(Contact.id.in_(orphan_ids)).delete(synchronize_session=False)
+    db.session.commit()
+    return len(orphan_ids)
+
+
 def _load_lowest_ruref_comment_groups(limit: int = 10) -> OrderedDict[str, OrderedDict[str, list[Comment]]]:
     rurefs = [
         row[0]
@@ -223,6 +244,10 @@ def help_page():
 @bp.get("/contacts-management")
 @login_required
 def contact_management():
+    deleted_orphans = _cleanup_orphan_contacts()
+    if deleted_orphans:
+        flash(f"Removed {deleted_orphans} orphan contacts with no matching comments.", "info")
+
     ruref = request.args.get("ruref", "").strip()
     show_all_contacts = _query_flag("show_all_contacts", default=False)
     search_performed = show_all_contacts or bool(ruref)
@@ -417,6 +442,12 @@ def edit_contact(contact_id: int):
     if contact is None:
         flash("Contact not found.", "error")
         return redirect(url_for("comments.index"))
+
+    if not _contact_has_matching_comment(contact):
+        db.session.delete(contact)
+        db.session.commit()
+        flash("Contact has no matching comment and was removed.", "error")
+        return redirect(url_for("comments.contact_management"))
 
     if request.method == "POST":
         contact.name = request.form.get("name", "").strip()

@@ -1,5 +1,5 @@
 from app.extensions import db
-from app.models import Comment, Contact, ReportingUnit, Survey
+from app.models import Comment, Contact, ReportingUnit, Survey, User
 
 
 def test_create_comment_rejects_invalid_period(client, login_analyst):
@@ -512,6 +512,43 @@ def test_contact_management_search_and_show_all(client, login_analyst, app):
             ru2 = ReportingUnit(ruref="12345678902")
             db.session.add(ru2)
 
+        author = User.query.filter_by(username="analyst1").first()
+        assert author is not None
+
+        db.session.add_all(
+            [
+                Comment(
+                    ruref="12345678901",
+                    survey_code=None,
+                    is_general=True,
+                    period="202601",
+                    comment_text="General comment for RU1",
+                    author_id=author.id,
+                ),
+                Comment(
+                    ruref="12345678901",
+                    survey_code="241",
+                    period="202601",
+                    comment_text="Survey 241 comment for RU1",
+                    author_id=author.id,
+                ),
+                Comment(
+                    ruref="12345678901",
+                    survey_code="221",
+                    period="202601",
+                    comment_text="Survey 221 comment for RU1",
+                    author_id=author.id,
+                ),
+                Comment(
+                    ruref="12345678902",
+                    survey_code="221",
+                    period="202601",
+                    comment_text="Survey 221 comment for RU2",
+                    author_id=author.id,
+                ),
+            ]
+        )
+
         contact_general = Contact(
             ruref="12345678901",
             survey_code=None,
@@ -558,3 +595,30 @@ def test_contact_management_search_and_show_all(client, login_analyst, app):
     assert show_all_response.status_code == 200
     assert b"RUREF 12345678901" in show_all_response.data
     assert b"RUREF 12345678902" in show_all_response.data
+
+
+def test_contact_management_removes_orphan_contacts(client, login_analyst, app):
+    with app.app_context():
+        ru = db.session.get(ReportingUnit, "12345678903")
+        if ru is None:
+            ru = ReportingUnit(ruref="12345678903")
+            db.session.add(ru)
+
+        orphan_contact = Contact(
+            ruref="12345678903",
+            survey_code="221",
+            name="Orphan Contact",
+            telephone_number="02070000009",
+            email_address="orphan@example.com",
+        )
+        db.session.add(orphan_contact)
+        db.session.commit()
+
+    response = client.get("/contacts-management?show_all_contacts=1", follow_redirects=True)
+    assert response.status_code == 200
+    assert b"Removed 1 orphan contacts with no matching comments." in response.data
+    assert b"Orphan Contact" not in response.data
+
+    with app.app_context():
+        still_exists = Contact.query.filter_by(ruref="12345678903", survey_code="221").first()
+        assert still_exists is None

@@ -209,6 +209,12 @@ Import rules:
 		- Total number of contacts
 		- Count of contacts by survey scope (`General` and survey code)
 
+### System Config: Delete all comments and contacts (Admin)
+
+- Admin System Config includes `Delete all comments and contacts`.
+- It removes all comments, comment edits, and contacts in one action.
+- This utility is temporary and should be retired once the live system is in place.
+
 ## Screenshots
 
 ### Search Results for `boron`

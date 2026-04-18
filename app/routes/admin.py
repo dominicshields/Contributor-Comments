@@ -537,6 +537,19 @@ def system_info():
         .all()
     )
 
+    reporting_units_with_contacts = db.session.query(db.func.count(distinct(Contact.ruref))).scalar() or 0
+    total_contacts = db.session.query(db.func.count(Contact.id)).scalar() or 0
+
+    contacts_by_scope = (
+        db.session.query(
+            db.case((Contact.survey_code.is_(None), "General"), else_=Contact.survey_code),
+            db.func.count(Contact.id),
+        )
+        .group_by(Contact.survey_code)
+        .order_by(db.case((Contact.survey_code.is_(None), "000"), else_=Contact.survey_code).asc())
+        .all()
+    )
+
     return render_template(
         "admin/system_info.html",
         reporting_units_with_comments=reporting_units_with_comments,
@@ -545,6 +558,9 @@ def system_info():
         database_size=database_size,
         comments_by_survey=comments_by_survey,
         comments_by_period=comments_by_period,
+        reporting_units_with_contacts=reporting_units_with_contacts,
+        total_contacts=total_contacts,
+        contacts_by_scope=contacts_by_scope,
     )
 
 

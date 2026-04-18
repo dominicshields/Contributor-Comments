@@ -284,6 +284,24 @@ def test_system_info_page_displays_comment_counts(client, login_admin, app):
                 ),
             ]
         )
+        db.session.add_all(
+            [
+                Contact(
+                    ruref="12345678901",
+                    survey_code="221",
+                    name="Survey Contact",
+                    telephone_number="07000000001",
+                    email_address="survey@example.com",
+                ),
+                Contact(
+                    ruref="12345678902",
+                    survey_code=None,
+                    name="General Contact",
+                    telephone_number="07000000002",
+                    email_address="general@example.com",
+                ),
+            ]
+        )
         db.session.commit()
 
     response = client.get("/admin/system-config/system-info", follow_redirects=True)
@@ -301,3 +319,9 @@ def test_system_info_page_displays_comment_counts(client, login_admin, app):
     assert b"241" in response.data
     assert b"202401" in response.data
     assert b"202312" in response.data
+    assert b"Contacts" in response.data
+    assert b"Contacts Summary" in response.data
+    assert b"Number of Reporting Units With contacts" in response.data
+    assert b"Total number of contacts" in response.data
+    assert b"Count of contacts by survey code" in response.data
+    assert b"General" in response.data

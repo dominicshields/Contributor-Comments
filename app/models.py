@@ -60,6 +60,9 @@ class ReportingUnit(db.Model):
     comments: Mapped[list[Comment]] = relationship(
         "Comment", back_populates="reporting_unit"
     )
+    contacts: Mapped[list[Contact]] = relationship(
+        "Contact", back_populates="reporting_unit"
+    )
 
 
 class Survey(db.Model):
@@ -78,6 +81,7 @@ class Survey(db.Model):
     )
 
     comments: Mapped[list[Comment]] = relationship("Comment", back_populates="survey")
+    contacts: Mapped[list[Contact]] = relationship("Contact", back_populates="survey")
 
     __table_args__ = (
         CheckConstraint(
@@ -97,9 +101,10 @@ class Comment(db.Model):
     ruref: Mapped[str] = mapped_column(
         String(11), ForeignKey("reporting_units.ruref"), nullable=False, index=True
     )
-    survey_code: Mapped[str] = mapped_column(
-        String(3), ForeignKey("surveys.code"), nullable=False, index=True
+    survey_code: Mapped[str | None] = mapped_column(
+        String(3), ForeignKey("surveys.code"), nullable=True, index=True
     )
+    is_general: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     period: Mapped[str] = mapped_column(String(6), nullable=False, index=True)
     comment_text: Mapped[str] = mapped_column(Text, nullable=False)
     author_id: Mapped[int] = mapped_column(
@@ -120,7 +125,7 @@ class Comment(db.Model):
     reporting_unit: Mapped[ReportingUnit] = relationship(
         "ReportingUnit", back_populates="comments"
     )
-    survey: Mapped[Survey] = relationship("Survey", back_populates="comments")
+    survey: Mapped[Survey | None] = relationship("Survey", back_populates="comments")
     author: Mapped[User] = relationship("User", back_populates="comments")
     edit_history: Mapped[list[CommentEdit]] = relationship(
         "CommentEdit", back_populates="comment", order_by="desc(CommentEdit.edited_at)"
@@ -155,4 +160,38 @@ class CommentEdit(db.Model):
 
     __table_args__ = (
         UniqueConstraint("id", "comment_id", name="uq_comment_edits_id_comment"),
+    )
+
+
+class Contact(db.Model):
+    __tablename__ = "contacts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ruref: Mapped[str] = mapped_column(
+        String(11), ForeignKey("reporting_units.ruref"), nullable=False, index=True
+    )
+    survey_code: Mapped[str | None] = mapped_column(
+        String(3), ForeignKey("surveys.code"), nullable=True, index=True
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    telephone_number: Mapped[str] = mapped_column(String(50), nullable=False, default="")
+    email_address: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    reporting_unit: Mapped[ReportingUnit] = relationship("ReportingUnit", back_populates="contacts")
+    survey: Mapped[Survey | None] = relationship("Survey", back_populates="contacts")
+
+    __table_args__ = (
+        CheckConstraint("length(ruref) = 11", name="ck_contacts_ruref_len"),
+        UniqueConstraint("ruref", "survey_code", name="uq_contacts_ruref_survey"),
     )

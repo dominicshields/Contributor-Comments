@@ -1,5 +1,5 @@
 from app.extensions import db
-from app.models import Comment, Contact, Survey
+from app.models import Comment, Contact, ReportingUnit, Survey
 
 
 def test_create_comment_rejects_invalid_period(client, login_analyst):
@@ -491,3 +491,70 @@ def test_ruref_detail_obeys_contact_toggle(client, login_analyst):
     response_on = client.get("/ruref/12345678907?show_contacts=1", follow_redirects=True)
     assert response_on.status_code == 200
     assert b"pat@example.com" in response_on.data
+
+
+def test_contact_management_requires_login(client):
+    response = client.get("/contacts-management", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"Contributor Comments Sign In" in response.data
+
+
+def test_contact_management_search_and_show_all(client, login_analyst, app):
+    with app.app_context():
+        ru1 = db.session.get(ReportingUnit, "12345678901")
+        if ru1 is None:
+            ru1 = ReportingUnit(ruref="12345678901")
+            db.session.add(ru1)
+
+        ru2 = db.session.get(ReportingUnit, "12345678902")
+        if ru2 is None:
+            ru2 = ReportingUnit(ruref="12345678902")
+            db.session.add(ru2)
+
+        contact_general = Contact(
+            ruref="12345678901",
+            survey_code=None,
+            name="General Contact",
+            telephone_number="02070000001",
+            email_address="general1@example.com",
+        )
+        contact_241 = Contact(
+            ruref="12345678901",
+            survey_code="241",
+            name="Survey 241 Contact",
+            telephone_number="02070000002",
+            email_address="s241@example.com",
+        )
+        contact_221 = Contact(
+            ruref="12345678901",
+            survey_code="221",
+            name="Survey 221 Contact",
+            telephone_number="02070000003",
+            email_address="s221@example.com",
+        )
+        contact_ru2 = Contact(
+            ruref="12345678902",
+            survey_code="221",
+            name="Second RU Contact",
+            telephone_number="02070000004",
+            email_address="ru2@example.com",
+        )
+        db.session.add_all([contact_general, contact_241, contact_221, contact_ru2])
+        db.session.commit()
+        contact_221_id = contact_221.id
+
+    search_response = client.get("/contacts-management?ruref=12345678901", follow_redirects=True)
+    assert search_response.status_code == 200
+    assert b"RUREF 12345678901" in search_response.data
+    assert b"RUREF 12345678902" not in search_response.data
+
+    # General first, then survey display order (221 before 241).
+    assert search_response.data.index(b"General") < search_response.data.index(b"Survey 221")
+    assert search_response.data.index(b"Survey 221") < search_response.data.index(b"Survey 241")
+    assert f"/contacts/{contact_221_id}/edit".encode() in search_response.data
+
+    show_all_response = client.get("/contacts-management?show_all_contacts=1", follow_redirects=True)
+    assert show_all_response.status_code == 200
+    assert b"RUREF 12345678901" in show_all_response.data
+    assert b"RUREF 12345678902" in show_all_response.data

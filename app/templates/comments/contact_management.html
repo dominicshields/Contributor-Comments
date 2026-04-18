@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Contact Management | Contributor Comments{% endblock %}
+
+{% block content %}
+<header class="ons-page-header">
+    <h1 class="ons-page-title">Contact Management</h1>
+    <p class="ons-page-lead">Search contacts by RUREF or show all contacts. Contacts are ordered by survey within each RUREF.</p>
+</header>
+
+<div class="ons-panel mb-4">
+    <h2 class="ons-section-title">Search Contacts</h2>
+    <form class="row g-3" method="get" action="{{ url_for('comments.contact_management') }}">
+        <div class="col-md-4">
+            <label class="form-label" for="ruref">RUREF (11 digits)</label>
+            <input class="form-control" type="text" id="ruref" name="ruref" value="{{ ruref }}" maxlength="11">
+        </div>
+        <div class="col-12">
+            <button class="btn btn-primary" type="submit">Run Search</button>
+            <button class="btn btn-outline-secondary" type="submit" name="show_all_contacts" value="1">Show All Contacts</button>
+        </div>
+    </form>
+</div>
+
+{% if search_performed %}
+<div class="ons-panel">
+    <h2 class="ons-section-title">Contact Results</h2>
+    {% if grouped_contacts %}
+        {% for result_ruref, contacts in grouped_contacts.items() %}
+        <section class="ons-panel mb-4">
+            <h3 class="h5">RUREF {{ result_ruref }}</h3>
+            {% for contact in contacts %}
+            <article class="comment-card">
+                <p class="comment-body mb-1"><strong>{% if contact.survey_code %}Survey {{ contact.survey_code }}{% else %}General{% endif %}</strong></p>
+                <div class="comment-contact-compact">
+                    <strong>Contact:</strong>
+                    <span>Name: {{ contact.name or 'Not provided' }}</span>
+                    <span>Telephone: {{ contact.telephone_number or 'Not provided' }}</span>
+                    <span>Email: {{ contact.email_address or 'Not provided' }}</span>
+                    <a href="{{ url_for('comments.edit_contact', contact_id=contact.id) }}">Edit contact</a>
+                </div>
+            </article>
+            {% endfor %}
+        </section>
+        {% endfor %}
+    {% else %}
+        <p class="mb-0">No contacts found.</p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

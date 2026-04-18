@@ -93,6 +93,20 @@ def _contacts_for_rurefs(rurefs: set[str]) -> dict[str, dict[str | None, Contact
     return contacts_by_ruref
 
 
+def _sort_contacts_for_display(contacts: list[Contact]) -> list[Contact]:
+    survey_order_map = _survey_order_map()
+    return sorted(
+        contacts,
+        key=lambda contact: (
+            contact.ruref,
+            0 if contact.survey_code is None else 1,
+            survey_order_map.get(contact.survey_code or "", 999),
+            contact.survey_code or "",
+            contact.id,
+        ),
+    )
+
+
 def _load_lowest_ruref_comment_groups(limit: int = 10) -> OrderedDict[str, OrderedDict[str, list[Comment]]]:
     rurefs = [
         row[0]
@@ -204,6 +218,35 @@ def index():
 @login_required
 def help_page():
     return render_template("help/index.html")
+
+
+@bp.get("/contacts-management")
+@login_required
+def contact_management():
+    ruref = request.args.get("ruref", "").strip()
+    show_all_contacts = _query_flag("show_all_contacts", default=False)
+    search_performed = show_all_contacts or bool(ruref)
+
+    contacts: list[Contact] = []
+    if show_all_contacts:
+        contacts = Contact.query.all()
+    elif ruref:
+        if is_valid_ruref(ruref):
+            contacts = Contact.query.filter_by(ruref=ruref).all()
+        else:
+            flash("RUREF must be exactly 11 numeric characters.", "error")
+
+    grouped_contacts: OrderedDict[str, list[Contact]] = OrderedDict()
+    for contact in _sort_contacts_for_display(contacts):
+        grouped_contacts.setdefault(contact.ruref, []).append(contact)
+
+    return render_template(
+        "comments/contact_management.html",
+        ruref=ruref,
+        show_all_contacts=show_all_contacts,
+        search_performed=search_performed,
+        grouped_contacts=grouped_contacts,
+    )
 
 
 @bp.post("/comments/new")

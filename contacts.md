@@ -13,3 +13,10 @@ A. Independent
 A. Always display general comment
 3. Should contact edit access be available to all authenticated users (current implementation), or admin-only?
 A. Available to all authenticated users
+
+Contacts V2
+I want a new top level menu option called Contact Management
+This will have a search page with filters for RUREF
+It will display contact full details within ruref and survey, ordered by survey
+
+There should be another button that shows all contacts ordered by survey within ruref, it should allow editing of details

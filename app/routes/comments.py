@@ -25,6 +25,50 @@ def _query_flag(name: str, default: bool = False) -> bool:
     return raw in {"1", "true", "yes", "on", "y"}
 
 
+def _add_comment_form_state(source) -> dict[str, str]:
+    is_general = source.get("is_general") == "1"
+    return {
+        "tab": "add",
+        "add_ruref": source.get("ruref", "").strip(),
+        "add_survey": "" if is_general else source.get("survey", "").strip(),
+        "add_period": source.get("period", "").strip(),
+        "add_comment": source.get("comment", "").strip(),
+        "add_is_general": "1" if is_general else "0",
+        "add_contact_name": source.get("contact_name", "").strip(),
+        "add_contact_phone": source.get("contact_phone", "").strip(),
+        "add_contact_email": source.get("contact_email", "").strip(),
+    }
+
+
+def _add_comment_return_state(source) -> dict[str, str]:
+    return {
+        "tab": "add",
+        "add_ruref": source.get("add_ruref", "").strip(),
+        "add_survey": source.get("add_survey", "").strip(),
+        "add_period": source.get("add_period", "").strip(),
+        "add_comment": source.get("add_comment", "").strip(),
+        "add_is_general": "1" if source.get("add_is_general") == "1" else "0",
+        "add_contact_name": source.get("add_contact_name", "").strip(),
+        "add_contact_phone": source.get("add_contact_phone", "").strip(),
+        "add_contact_email": source.get("add_contact_email", "").strip(),
+    }
+
+
+def _has_add_comment_return_state(state: dict[str, str]) -> bool:
+    return any(
+        state[key]
+        for key in (
+            "add_ruref",
+            "add_survey",
+            "add_period",
+            "add_comment",
+            "add_contact_name",
+            "add_contact_phone",
+            "add_contact_email",
+        )
+    ) or state.get("add_is_general") == "1"
+
+
 def _format_count_for_display(value: int) -> str:
     return f"{value:,}".replace(",", " ")
 
@@ -161,6 +205,15 @@ def index():
     selected_surveys = request.args.getlist("surveys")
     show_comments = _query_flag("show_comments", default=False)
     show_contacts = _query_flag("show_contacts", default=False)
+    add_tab_active = request.args.get("tab") == "add"
+    add_ruref = request.args.get("add_ruref", "").strip()
+    add_survey = request.args.get("add_survey", "").strip()
+    add_period = request.args.get("add_period", "").strip()
+    add_comment = request.args.get("add_comment", "").strip()
+    add_is_general = request.args.get("add_is_general") == "1"
+    add_contact_name = request.args.get("add_contact_name", "").strip()
+    add_contact_phone = request.args.get("add_contact_phone", "").strip()
+    add_contact_email = request.args.get("add_contact_email", "").strip()
     search_performed = show_comments or bool(ruref or query_text or selected_surveys)
 
     surveys = Survey.query.filter_by(is_active=True).order_by(Survey.display_order.asc()).all()
@@ -233,6 +286,15 @@ def index():
         selected_surveys=selected_surveys,
         ruref=ruref,
         q=query_text,
+        add_tab_active=add_tab_active,
+        add_ruref=add_ruref,
+        add_survey=add_survey,
+        add_period=add_period,
+        add_comment=add_comment,
+        add_is_general=add_is_general,
+        add_contact_name=add_contact_name,
+        add_contact_phone=add_contact_phone,
+        add_contact_email=add_contact_email,
     )
 
 
@@ -528,6 +590,40 @@ def create_comment():
     return redirect(url_for("comments.ruref_detail", ruref=ruref))
 
 
+@bp.post("/comments/check-contact")
+@login_required
+def check_contact():
+    ruref = request.form.get("ruref", "").strip()
+    survey_code = request.form.get("survey", "").strip()
+    is_general = request.form.get("is_general") == "1"
+    redirect_params = _add_comment_form_state(request.form)
+
+    if not is_valid_ruref(ruref):
+        flash("Reporting Unit Reference must be exactly 11 numeric characters.", "error")
+        return redirect(url_for("comments.index", **redirect_params))
+
+    contact_survey_code: str | None = None
+    if not is_general:
+        survey = db.session.get(Survey, survey_code)
+        if survey is None or not survey.is_active:
+            flash("Survey must be selected from the configured survey list.", "error")
+            return redirect(url_for("comments.index", **redirect_params))
+        contact_survey_code = survey_code
+
+    existing_contact = Contact.query.filter_by(ruref=ruref, survey_code=contact_survey_code).first()
+    if existing_contact is not None:
+        scope = "general comment" if contact_survey_code is None else f"survey {contact_survey_code}"
+        flash(
+            f"A contact already exists for this reporting unit and {scope}. Edit the existing contact instead.",
+            "info",
+        )
+        return redirect(url_for("comments.edit_contact", contact_id=existing_contact.id, **redirect_params))
+
+    scope = "general comment" if contact_survey_code is None else f"survey {contact_survey_code}"
+    flash(f"No existing contact was found for this reporting unit and {scope}.", "info")
+    return redirect(url_for("comments.index", **redirect_params))
+
+
 @bp.get("/ruref/<ruref>")
 @login_required
 def ruref_detail(ruref: str):
@@ -607,6 +703,9 @@ def edit_comment(comment_id: int):
 @login_required
 def edit_contact(contact_id: int):
     contact = db.session.get(Contact, contact_id)
+    return_state = _add_comment_return_state(request.values)
+    has_return_state = _has_add_comment_return_state(return_state)
+
     if contact is None:
         flash("Contact not found.", "error")
         return redirect(url_for("comments.index"))
@@ -623,6 +722,15 @@ def edit_contact(contact_id: int):
         contact.email_address = request.form.get("email_address", "").strip()
         db.session.commit()
         flash("Contact updated.", "success")
+
+        if has_return_state:
+            return redirect(url_for("comments.index", **return_state))
+
         return redirect(url_for("comments.ruref_detail", ruref=contact.ruref))
 
-    return render_template("comments/edit_contact.html", contact=contact)
+    return render_template(
+        "comments/edit_contact.html",
+        contact=contact,
+        return_state=return_state,
+        has_return_state=has_return_state,
+    )

@@ -112,6 +112,19 @@ erDiagram
 - Search tab includes `Show Comments (Testing)` to load the lowest 10 RUREFs with comments, grouped in the usual survey order
 - Search results are shown only after a search is performed
 - RUREF detail page groups comments by survey in configured survey order, with descending period order
+- Top-level `Comments` menu includes:
+	- `Comments by Author`
+		- Case-insensitive author filter (full name or username)
+		- Grouped by author, then RUREF, then survey (`General` first, then survey display order)
+		- Subtle heading counts shown as `Author Name (N)`
+		- `Collapse all` / `Expand all` controls
+		- Pagination at 50 authors per page
+	- `Comments by Date`
+		- Initial page shows a collapsed year/month index with subtle counts (all years visible)
+		- Month links open a detail view for the selected month
+		- Month detail view groups by RUREF, then survey (`General` first, then survey display order)
+		- Month detail results are paginated at 50 comments per page
+		- `Collapse all` / `Expand all` controls apply to the year index view
 - General comments are supported and appear before survey-specific comments in grouped results
 - Search filtered to one or more surveys still includes general comments
 - Author is displayed as `Author: <name>` after each comment, with created timestamp on hover tooltip

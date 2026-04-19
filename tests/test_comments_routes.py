@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from app.extensions import db
 from app.models import Comment, Contact, ReportingUnit, Survey, User
 
@@ -622,3 +624,369 @@ def test_contact_management_removes_orphan_contacts(client, login_analyst, app):
     with app.app_context():
         still_exists = Contact.query.filter_by(ruref="12345678903", survey_code="221").first()
         assert still_exists is None
+
+
+def test_comments_by_author_requires_login(client):
+    response = client.get("/comments/by-author", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"Contributor Comments Sign In" in response.data
+
+
+def test_comments_by_author_filter_and_ordering(client, login_admin, app):
+    with app.app_context():
+        analyst1 = User.query.filter_by(username="analyst1").first()
+        analyst2 = User.query.filter_by(username="analyst2").first()
+        assert analyst1 is not None
+        assert analyst2 is not None
+
+        for ruref in ("12345678001", "12345678002", "12345678003"):
+            if db.session.get(ReportingUnit, ruref) is None:
+                db.session.add(ReportingUnit(ruref=ruref))
+
+        db.session.add_all(
+            [
+                Comment(
+                    ruref="12345678003",
+                    survey_code="241",
+                    is_general=False,
+                    period="202603",
+                    comment_text="alpha second",
+                    author_id=analyst1.id,
+                ),
+                Comment(
+                    ruref="12345678001",
+                    survey_code=None,
+                    is_general=True,
+                    period="202603",
+                    comment_text="alpha general",
+                    author_id=analyst1.id,
+                ),
+                Comment(
+                    ruref="12345678002",
+                    survey_code="221",
+                    is_general=False,
+                    period="202603",
+                    comment_text="bravo",
+                    author_id=analyst2.id,
+                ),
+            ]
+        )
+        db.session.commit()
+
+    response_all = client.get("/comments/by-author", follow_redirects=True)
+    assert response_all.status_code == 200
+    assert b"analyst1" in response_all.data
+    assert b"analyst2" in response_all.data
+    assert response_all.data.index(b"analyst1") < response_all.data.index(b"analyst2")
+    assert response_all.data.index(b"12345678001") < response_all.data.index(b"12345678003")
+
+    response_filtered = client.get("/comments/by-author?author=analyst1", follow_redirects=True)
+    assert response_filtered.status_code == 200
+    assert b"analyst1" in response_filtered.data
+    assert b"analyst2" not in response_filtered.data
+
+
+def test_comments_by_author_pagination_second_page(client, login_admin, app):
+    with app.app_context():
+        created_usernames = []
+
+        for i in range(55):
+            username = f"paging_user_{i:02d}"
+            user = User(username=username, full_name=f"Paging User {i:02d}", is_admin=False)
+            user.set_password("Password123!")
+            db.session.add(user)
+            db.session.flush()
+
+            created_usernames.append(username.encode())
+
+            ruref = f"{20000000000 + i:011d}"
+            if db.session.get(ReportingUnit, ruref) is None:
+                db.session.add(ReportingUnit(ruref=ruref))
+
+            db.session.add(
+                Comment(
+                    ruref=ruref,
+                    survey_code="221",
+                    is_general=False,
+                    period="202603",
+                    comment_text=f"paginated author comment {i}",
+                    author_id=user.id,
+                )
+            )
+
+        db.session.commit()
+
+    page_one = client.get("/comments/by-author?page=1", follow_redirects=True)
+    assert page_one.status_code == 200
+    assert created_usernames[0] in page_one.data
+    assert created_usernames[49] in page_one.data
+    assert created_usernames[50] not in page_one.data
+
+    page_two = client.get("/comments/by-author?page=2", follow_redirects=True)
+    assert page_two.status_code == 200
+    assert created_usernames[50] in page_two.data
+    assert created_usernames[54] in page_two.data
+    assert created_usernames[0] not in page_two.data
+
+
+def test_comments_by_author_paginates_authors_not_comments(client, login_admin, app):
+    with app.app_context():
+        analyst1 = User.query.filter_by(username="analyst1").first()
+        analyst2 = User.query.filter_by(username="analyst2").first()
+        assert analyst1 is not None
+        assert analyst2 is not None
+
+        for i in range(55):
+            ruref = f"{30000000000 + i:011d}"
+            if db.session.get(ReportingUnit, ruref) is None:
+                db.session.add(ReportingUnit(ruref=ruref))
+
+            db.session.add(
+                Comment(
+                    ruref=ruref,
+                    survey_code="221",
+                    is_general=False,
+                    period="202603",
+                    comment_text=f"heavy author comment {i}",
+                    author_id=analyst1.id,
+                )
+            )
+
+        second_author_ruref = "39999999999"
+        if db.session.get(ReportingUnit, second_author_ruref) is None:
+            db.session.add(ReportingUnit(ruref=second_author_ruref))
+
+        db.session.add(
+            Comment(
+                ruref=second_author_ruref,
+                survey_code="221",
+                is_general=False,
+                period="202603",
+                comment_text="second author marker",
+                author_id=analyst2.id,
+            )
+        )
+        db.session.commit()
+
+    response = client.get("/comments/by-author?page=1", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"analyst1" in response.data
+    assert b"analyst2" in response.data
+    assert b"second author marker" in response.data
+
+
+def test_comments_by_author_invalid_page_defaults_to_first_page(client, login_admin, app):
+    with app.app_context():
+        analyst1 = User.query.filter_by(username="analyst1").first()
+        assert analyst1 is not None
+
+        ruref = "29999999999"
+        if db.session.get(ReportingUnit, ruref) is None:
+            db.session.add(ReportingUnit(ruref=ruref))
+
+        db.session.add(
+            Comment(
+                ruref=ruref,
+                survey_code="221",
+                is_general=False,
+                period="202603",
+                comment_text="invalid page fallback marker",
+                author_id=analyst1.id,
+            )
+        )
+        db.session.commit()
+
+    response = client.get("/comments/by-author?page=not-a-number", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"invalid page fallback marker" in response.data
+
+
+def test_comments_by_date_requires_login(client):
+    response = client.get("/comments/by-date", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"Contributor Comments Sign In" in response.data
+
+
+def test_comments_by_date_grouping_order_and_counts(client, login_admin, app):
+    with app.app_context():
+        analyst1 = User.query.filter_by(username="analyst1").first()
+        assert analyst1 is not None
+
+        for ruref in ("12345678101", "12345678102"):
+            if db.session.get(ReportingUnit, ruref) is None:
+                db.session.add(ReportingUnit(ruref=ruref))
+
+        db.session.add_all(
+            [
+                Comment(
+                    ruref="12345678102",
+                    survey_code="241",
+                    is_general=False,
+                    period="202604",
+                    comment_text="april ruref two survey",
+                    author_id=analyst1.id,
+                    created_at=datetime(2026, 4, 10, 9, 0, tzinfo=timezone.utc),
+                ),
+                Comment(
+                    ruref="12345678101",
+                    survey_code=None,
+                    is_general=True,
+                    period="202604",
+                    comment_text="april general",
+                    author_id=analyst1.id,
+                    created_at=datetime(2026, 4, 9, 9, 0, tzinfo=timezone.utc),
+                ),
+                Comment(
+                    ruref="12345678101",
+                    survey_code="221",
+                    is_general=False,
+                    period="202604",
+                    comment_text="april survey",
+                    author_id=analyst1.id,
+                    created_at=datetime(2026, 4, 8, 9, 0, tzinfo=timezone.utc),
+                ),
+                Comment(
+                    ruref="12345678101",
+                    survey_code="221",
+                    is_general=False,
+                    period="202603",
+                    comment_text="march survey",
+                    author_id=analyst1.id,
+                    created_at=datetime(2026, 3, 5, 9, 0, tzinfo=timezone.utc),
+                ),
+            ]
+        )
+        db.session.commit()
+
+    response = client.get("/comments/by-date", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"Collapse all" in response.data
+    assert b"Expand all" in response.data
+    assert b"2026 (4)" in response.data
+    assert b"April (3)" in response.data
+    assert b"March (1)" in response.data
+    assert response.data.index(b"April (3)") < response.data.index(b"March (1)")
+    assert b"april general" not in response.data
+    assert b"march survey" not in response.data
+
+
+def test_comments_by_date_open_month_shows_grouped_comments(client, login_admin, app):
+    with app.app_context():
+        analyst1 = User.query.filter_by(username="analyst1").first()
+        assert analyst1 is not None
+
+        for ruref in ("12345678201", "12345678202"):
+            if db.session.get(ReportingUnit, ruref) is None:
+                db.session.add(ReportingUnit(ruref=ruref))
+
+        db.session.add_all(
+            [
+                Comment(
+                    ruref="12345678201",
+                    survey_code=None,
+                    is_general=True,
+                    period="202604",
+                    comment_text="open month general",
+                    author_id=analyst1.id,
+                    created_at=datetime(2026, 4, 10, 9, 0, tzinfo=timezone.utc),
+                ),
+                Comment(
+                    ruref="12345678201",
+                    survey_code="221",
+                    is_general=False,
+                    period="202604",
+                    comment_text="open month survey",
+                    author_id=analyst1.id,
+                    created_at=datetime(2026, 4, 9, 9, 0, tzinfo=timezone.utc),
+                ),
+                Comment(
+                    ruref="12345678202",
+                    survey_code="241",
+                    is_general=False,
+                    period="202604",
+                    comment_text="open month ruref two",
+                    author_id=analyst1.id,
+                    created_at=datetime(2026, 4, 8, 9, 0, tzinfo=timezone.utc),
+                ),
+            ]
+        )
+        db.session.commit()
+
+    response = client.get("/comments/by-date?year=2026&month=4", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"April 2026" in response.data
+    assert response.data.index(b"RUREF 12345678201") < response.data.index(b"RUREF 12345678202")
+    assert response.data.index(b"General") < response.data.index(b"221")
+    assert b"open month general" in response.data
+    assert b"open month survey" in response.data
+    assert b"open month ruref two" in response.data
+
+
+def test_comments_by_date_invalid_page_defaults_to_first_page(client, login_admin, app):
+    with app.app_context():
+        analyst1 = User.query.filter_by(username="analyst1").first()
+        assert analyst1 is not None
+
+        ruref = "18888888888"
+        if db.session.get(ReportingUnit, ruref) is None:
+            db.session.add(ReportingUnit(ruref=ruref))
+
+        db.session.add(
+            Comment(
+                ruref=ruref,
+                survey_code="221",
+                is_general=False,
+                period="202604",
+                comment_text="by date invalid page marker",
+                author_id=analyst1.id,
+            )
+        )
+        db.session.commit()
+
+    response = client.get("/comments/by-date?year=2026&month=4&page=not-a-number", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"by date invalid page marker" in response.data
+
+
+def test_comments_by_date_month_pagination_second_page(client, login_admin, app):
+    with app.app_context():
+        analyst1 = User.query.filter_by(username="analyst1").first()
+        assert analyst1 is not None
+
+        for i in range(55):
+            ruref = f"{17700000000 + i:011d}"
+            if db.session.get(ReportingUnit, ruref) is None:
+                db.session.add(ReportingUnit(ruref=ruref))
+
+            db.session.add(
+                Comment(
+                    ruref=ruref,
+                    survey_code="221",
+                    is_general=False,
+                    period="202604",
+                    comment_text=f"month page marker {i}",
+                    author_id=analyst1.id,
+                    created_at=datetime(2026, 4, 10, 9, 0, tzinfo=timezone.utc),
+                )
+            )
+
+        db.session.commit()
+
+    page_one = client.get("/comments/by-date?year=2026&month=4&page=1", follow_redirects=True)
+    assert page_one.status_code == 200
+    assert b"month page marker 0" in page_one.data
+    assert b"month page marker 49" in page_one.data
+    assert b"month page marker 50" not in page_one.data
+
+    page_two = client.get("/comments/by-date?year=2026&month=4&page=2", follow_redirects=True)
+    assert page_two.status_code == 200
+    assert b"month page marker 50" in page_two.data
+    assert b"month page marker 54" in page_two.data
+    assert b"month page marker 0" not in page_two.data

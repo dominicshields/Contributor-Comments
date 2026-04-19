@@ -19,15 +19,15 @@
 
 <ul class="nav nav-tabs mb-3" id="commentsTabs" role="tablist">
     <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="search-tab" data-bs-toggle="tab" data-bs-target="#search-tab-pane" type="button" role="tab" aria-controls="search-tab-pane" aria-selected="true">Search</button>
+        <button class="nav-link {% if not add_tab_active %}active{% endif %}" id="search-tab" data-bs-toggle="tab" data-bs-target="#search-tab-pane" type="button" role="tab" aria-controls="search-tab-pane" aria-selected="{{ 'true' if not add_tab_active else 'false' }}">Search</button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="add-tab" data-bs-toggle="tab" data-bs-target="#add-tab-pane" type="button" role="tab" aria-controls="add-tab-pane" aria-selected="false">Add Comment</button>
+        <button class="nav-link {% if add_tab_active %}active{% endif %}" id="add-tab" data-bs-toggle="tab" data-bs-target="#add-tab-pane" type="button" role="tab" aria-controls="add-tab-pane" aria-selected="{{ 'true' if add_tab_active else 'false' }}">Add Comment</button>
     </li>
 </ul>
 
 <div class="tab-content" id="commentsTabsContent">
-    <div class="tab-pane fade show active" id="search-tab-pane" role="tabpanel" aria-labelledby="search-tab" tabindex="0">
+    <div class="tab-pane fade {% if not add_tab_active %}show active{% endif %}" id="search-tab-pane" role="tabpanel" aria-labelledby="search-tab" tabindex="0">
         <div class="small text-end mb-2">
             <div>Number of Reporting Units with comments: {{ reporting_units_with_comments }}</div>
             <div>Total comments: {{ total_comments }}</div>
@@ -201,14 +201,14 @@
         {% endif %}
     </div>
 
-    <div class="tab-pane fade" id="add-tab-pane" role="tabpanel" aria-labelledby="add-tab" tabindex="0">
+    <div class="tab-pane fade {% if add_tab_active %}show active{% endif %}" id="add-tab-pane" role="tabpanel" aria-labelledby="add-tab" tabindex="0">
         <div class="ons-panel mb-4">
             <h2 class="ons-section-title">Add Comment</h2>
             <form method="post" action="{{ url_for('comments.create_comment') }}">
                 <div class="row g-3">
                     <div class="col-12">
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="1" id="is-general" name="is_general" data-general-comment-toggle>
+                            <input class="form-check-input" type="checkbox" value="1" id="is-general" name="is_general" data-general-comment-toggle {% if add_is_general %}checked{% endif %}>
                             <label class="form-check-label" for="is-general">
                                 General comment (not tied to one survey)
                             </label>
@@ -216,40 +216,43 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label" for="new-ruref">RUREF</label>
-                        <input class="form-control" type="text" id="new-ruref" name="ruref" maxlength="11" required>
+                        <input class="form-control" type="text" id="new-ruref" name="ruref" value="{{ add_ruref }}" maxlength="11" required>
                     </div>
                     <div class="col-md-4" data-survey-input-wrap>
                         <label class="form-label" for="new-survey">Survey</label>
                         <select class="form-select" id="new-survey" name="survey" required>
                             <option value="">Select survey</option>
                             {% for survey in surveys %}
-                            <option value="{{ survey.code }}">{{ survey.code }}</option>
+                            <option value="{{ survey.code }}" {% if survey.code == add_survey %}selected{% endif %}>{{ survey.code }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label" for="new-period">Period (YYYYMM)</label>
-                        <input class="form-control" type="text" id="new-period" name="period" maxlength="6" required>
+                        <input class="form-control" type="text" id="new-period" name="period" value="{{ add_period }}" maxlength="6" required>
                     </div>
                     <div class="col-12">
                         <label class="form-label" for="new-comment">Comment</label>
-                        <textarea class="form-control" id="new-comment" name="comment" rows="4" required></textarea>
+                        <textarea class="form-control" id="new-comment" name="comment" rows="4" required>{{ add_comment }}</textarea>
                     </div>
-                    <div class="col-12">
-                        <h3 class="h6 mb-2">Contact (optional)</h3>
-                        <p class="text-muted small mb-2">Only enter contact details if no contact exists yet for this RUREF and survey.</p>
+                    <div class="col-12 d-flex justify-content-between align-items-end flex-wrap gap-2">
+                        <div>
+                            <h3 class="h6 mb-2">Contact (optional)</h3>
+                            <p class="text-muted small mb-0">Only enter contact details if no contact exists yet for this RUREF and survey.</p>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm" type="submit" formaction="{{ url_for('comments.check_contact') }}" formnovalidate>Check for Contact</button>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label" for="contact-name">Name</label>
-                        <input class="form-control" type="text" id="contact-name" name="contact_name" maxlength="120">
+                        <input class="form-control" type="text" id="contact-name" name="contact_name" value="{{ add_contact_name }}" maxlength="120">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label" for="contact-phone">Telephone</label>
-                        <input class="form-control" type="text" id="contact-phone" name="contact_phone" maxlength="50">
+                        <input class="form-control" type="text" id="contact-phone" name="contact_phone" value="{{ add_contact_phone }}" maxlength="50">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label" for="contact-email">Email</label>
-                        <input class="form-control" type="email" id="contact-email" name="contact_email" maxlength="255">
+                        <input class="form-control" type="email" id="contact-email" name="contact_email" value="{{ add_contact_email }}" maxlength="255">
                     </div>
                     <div class="col-12">
                         <button class="btn btn-primary" type="submit">Save Comment</button>

@@ -430,6 +430,110 @@ def test_create_comment_rejects_duplicate_contact_for_same_scope(client, login_a
         assert len(contacts) == 1
 
 
+def test_check_contact_redirects_to_existing_contact_edit(client, login_analyst):
+    client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678901",
+            "survey": "221",
+            "period": "202601",
+            "comment": "First",
+            "contact_name": "Pat Contact",
+            "contact_phone": "0123456789",
+            "contact_email": "pat@example.com",
+        },
+        follow_redirects=True,
+    )
+
+    response = client.post(
+        "/comments/check-contact",
+        data={
+            "ruref": "12345678901",
+            "survey": "221",
+            "period": "202602",
+            "comment": "Draft follow-up",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"A contact already exists for this reporting unit and survey 221." in response.data
+    assert b"Edit Contact" in response.data
+    assert b"Your draft comment has been preserved." in response.data
+    assert b'name="add_comment" value="Draft follow-up"' in response.data
+
+
+def test_check_contact_returns_to_add_form_when_scope_has_no_contact(client, login_analyst):
+    response = client.post(
+        "/comments/check-contact",
+        data={
+            "ruref": "12345678901",
+            "survey": "221",
+            "period": "202602",
+            "comment": "Draft follow-up",
+            "contact_name": "Draft Contact",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"No existing contact was found for this reporting unit and survey 221." in response.data
+    assert b'button class="nav-link active" id="add-tab"' in response.data
+    assert b'value="12345678901"' in response.data
+    assert b"Draft follow-up" in response.data
+    assert b"Draft Contact" in response.data
+
+
+def test_edit_contact_returns_to_preserved_add_comment_draft(client, login_analyst, app):
+    client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678901",
+            "survey": "221",
+            "period": "202601",
+            "comment": "First",
+            "contact_name": "Pat Contact",
+            "contact_phone": "0123456789",
+            "contact_email": "pat@example.com",
+        },
+        follow_redirects=True,
+    )
+
+    with app.app_context():
+        contact = Contact.query.filter_by(ruref="12345678901", survey_code="221").first()
+        assert contact is not None
+        contact_id = contact.id
+
+    response = client.post(
+        f"/contacts/{contact_id}/edit",
+        data={
+            "name": "Updated Contact",
+            "telephone_number": "0999999999",
+            "email_address": "updated@example.com",
+            "add_ruref": "12345678901",
+            "add_survey": "221",
+            "add_period": "202602",
+            "add_comment": "Draft follow-up",
+            "add_is_general": "0",
+            "add_contact_name": "",
+            "add_contact_phone": "",
+            "add_contact_email": "",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Contact updated." in response.data
+    assert b'button class="nav-link active" id="add-tab"' in response.data
+    assert b'value="12345678901"' in response.data
+    assert b"Draft follow-up" in response.data
+
+    with app.app_context():
+        updated_contact = db.session.get(Contact, contact_id)
+        assert updated_contact is not None
+        assert updated_contact.name == "Updated Contact"
+
+
 def test_edit_contact_updates_values(client, login_analyst, app):
     client.post(
         "/comments/new",

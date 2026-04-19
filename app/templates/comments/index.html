@@ -185,7 +185,7 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <span data-bs-toggle="tooltip" title="{{ comment.created_at | uk_datetime }}">Author: {{ comment.author.full_name }}</span>
+                                    <span data-bs-toggle="tooltip" title="Created {{ comment.created_at | uk_datetime }} UTC->UK">{{ comment.author.full_name }}</span>
                                 </td>
                                 <td><a href="{{ url_for('comments.ruref_detail', ruref=comment.ruref, show_contacts='1' if show_contacts else '0') }}">View RUREF</a></td>
                             </tr>

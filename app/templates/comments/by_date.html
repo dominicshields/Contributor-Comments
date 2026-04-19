@@ -1,6 +1,51 @@
 {% extends "base.html" %}
 {% block title %}Comments by Date | Contributor Comments{% endblock %}
 
+{% block extra_css %}
+<style>
+.by-date-results-table {
+    margin-bottom: 0;
+}
+
+.by-date-results-table th,
+.by-date-results-table td {
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
+}
+
+.by-date-results-table th,
+.by-date-results-table td.meta-col,
+.by-date-results-table td.action-col {
+    white-space: nowrap;
+}
+
+.by-date-results-table td.meta-col {
+    color: #3d3d3d;
+}
+
+.by-date-results-table td.comment-col {
+    line-height: 1.45;
+    min-width: 20rem;
+}
+
+.by-date-results-table .col-created {
+    width: 10.5rem;
+}
+
+.by-date-results-table .col-period {
+    width: 6.5rem;
+}
+
+.by-date-results-table .col-author {
+    width: 12rem;
+}
+
+.by-date-results-table .col-action {
+    width: 8rem;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <header class="ons-page-header">
     <h1 class="ons-page-title">Comments by Date</h1>
@@ -74,11 +119,11 @@
                         <tbody>
                         {% for comment in survey_comments %}
                             <tr>
-                                <td>{{ comment.created_at | uk_datetime }}</td>
-                                <td>{{ comment.period }}</td>
-                                <td>{{ comment.author.full_name }}</td>
-                                <td>{{ comment.comment_text }}</td>
-                                <td><a href="{{ url_for('comments.ruref_detail', ruref=comment.ruref) }}">View RUREF</a></td>
+                                <td class="meta-col">{{ comment.created_at | uk_datetime }}</td>
+                                <td class="meta-col">{{ comment.period }}</td>
+                                <td class="meta-col">{{ comment.author.full_name }}</td>
+                                <td class="comment-col">{{ comment.comment_text }}</td>
+                                <td class="action-col"><a href="{{ url_for('comments.ruref_detail', ruref=comment.ruref) }}">View RUREF</a></td>
                             </tr>
                         {% endfor %}
                         </tbody>

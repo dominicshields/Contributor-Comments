@@ -69,6 +69,47 @@
 .author-group-content[hidden] {
     display: none;
 }
+
+.by-author-results-table {
+    margin-bottom: 0;
+}
+
+.by-author-results-table th,
+.by-author-results-table td {
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
+}
+
+.by-author-results-table th,
+.by-author-results-table td.meta-col,
+.by-author-results-table td.action-col {
+    white-space: nowrap;
+}
+
+.by-author-results-table td.meta-col {
+    color: #3d3d3d;
+}
+
+.by-author-results-table td.comment-col {
+    line-height: 1.45;
+    min-width: 20rem;
+}
+
+.by-author-results-table .col-ruref {
+    width: 9.5rem;
+}
+
+.by-author-results-table .col-survey {
+    width: 6.5rem;
+}
+
+.by-author-results-table .col-period {
+    width: 6.5rem;
+}
+
+.by-author-results-table .col-action {
+    width: 8rem;
+}
 </style>
 {% endblock %}
 
@@ -108,7 +149,14 @@
             </button>
             <div class="author-group-content">
             <div class="table-responsive">
-                <table class="table table-sm align-middle">
+                <table class="table table-sm align-middle by-author-results-table">
+                    <colgroup>
+                        <col class="col-ruref">
+                        <col class="col-survey">
+                        <col class="col-period">
+                        <col class="col-comment">
+                        <col class="col-action">
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>RUREF</th>
@@ -121,11 +169,11 @@
                     <tbody>
                     {% for comment in author_comments %}
                         <tr>
-                            <td>{{ comment.ruref }}</td>
-                            <td>{% if comment.is_general %}General{% else %}{{ comment.survey_code }}{% endif %}</td>
-                            <td>{{ comment.period }}</td>
-                            <td>{{ comment.comment_text }}</td>
-                            <td><a href="{{ url_for('comments.ruref_detail', ruref=comment.ruref) }}">View RUREF</a></td>
+                            <td class="meta-col">{{ comment.ruref }}</td>
+                            <td class="meta-col">{% if comment.is_general %}General{% else %}{{ comment.survey_code }}{% endif %}</td>
+                            <td class="meta-col">{{ comment.period }}</td>
+                            <td class="comment-col">{{ comment.comment_text }}</td>
+                            <td class="action-col"><a href="{{ url_for('comments.ruref_detail', ruref=comment.ruref) }}">View RUREF</a></td>
                         </tr>
                     {% endfor %}
                     </tbody>

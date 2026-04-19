@@ -10,6 +10,8 @@ from app.models import Comment, CommentEdit, Contact, ReportingUnit, Survey, Use
 def test_system_config_menu_includes_bulk_upload_for_admin(client, login_admin):
     response = client.get("/comments", follow_redirects=True)
     assert response.status_code == 200
+    assert b"Comments" in response.data
+    assert b"Comments by Author" in response.data
     assert b"System Config" in response.data
     assert b"System Info" in response.data
     assert b"Help" in response.data
@@ -21,6 +23,8 @@ def test_system_config_menu_includes_bulk_upload_for_admin(client, login_admin):
 def test_survey_metadata_nav_visible_to_non_admin_but_not_system_config(client, login_analyst):
     response = client.get("/comments", follow_redirects=True)
     assert response.status_code == 200
+    assert b"Comments" in response.data
+    assert b"Comments by Author" in response.data
     assert b"Survey Metadata" in response.data
     assert b"Help" in response.data
     assert b"System Config" not in response.data

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import calendar
 from collections import OrderedDict
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
@@ -239,6 +240,173 @@ def index():
 @login_required
 def help_page():
     return render_template("help/index.html")
+
+
+@bp.get("/comments/by-author")
+@login_required
+def comments_by_author():
+    author_filter = request.args.get("author", "").strip()
+    page = request.args.get("page", default=1, type=int)
+    per_page = 50
+
+    author_query = (
+        db.session.query(User.id, User.full_name, User.username)
+        .join(Comment, Comment.author_id == User.id)
+    )
+
+    if author_filter:
+        like_pattern = f"%{author_filter}%"
+        author_query = author_query.filter(
+            or_(
+                User.full_name.ilike(like_pattern),
+                User.username.ilike(like_pattern),
+            )
+        )
+
+    author_query = author_query.group_by(User.id, User.full_name, User.username).order_by(
+        User.full_name.asc(),
+        User.username.asc(),
+    )
+
+    pagination = author_query.paginate(page=page, per_page=per_page, error_out=False)
+    page_authors = pagination.items
+    page_author_ids = [author_id for author_id, _, _ in page_authors]
+
+    comments: list[Comment] = []
+    if page_author_ids:
+        comments = (
+            Comment.query
+            .join(User, Comment.author_id == User.id)
+            .outerjoin(Survey, Comment.survey_code == Survey.code)
+            .filter(Comment.author_id.in_(page_author_ids))
+            .order_by(
+                User.full_name.asc(),
+                User.username.asc(),
+                Comment.ruref.asc(),
+                Comment.is_general.desc(),
+                Survey.display_order.asc(),
+                Comment.survey_code.asc(),
+                Comment.period.desc(),
+                Comment.created_at.desc(),
+            )
+            .all()
+        )
+
+    comments_by_author: OrderedDict[tuple[int, str, str], list[Comment]] = OrderedDict()
+    for comment in comments:
+        author_key = (comment.author.id, comment.author.full_name, comment.author.username)
+        comments_by_author.setdefault(author_key, []).append(comment)
+
+    counts_by_author = {}
+    if page_author_ids:
+        count_query = (
+            db.session.query(User.id, db.func.count(Comment.id))
+            .join(Comment, Comment.author_id == User.id)
+            .filter(User.id.in_(page_author_ids))
+            .group_by(User.id)
+        )
+        counts_by_author = {author_id: count for author_id, count in count_query.all()}
+
+    return render_template(
+        "comments/by_author.html",
+        author_filter=author_filter,
+        comments_by_author=comments_by_author,
+        counts_by_author=counts_by_author,
+        pagination=pagination,
+    )
+
+
+@bp.get("/comments/by-date")
+@login_required
+def comments_by_date():
+    selected_year = request.args.get("year", type=int)
+    selected_month = request.args.get("month", type=int)
+    page = request.args.get("page", default=1, type=int)
+    per_page = 50
+
+    created_dates = db.session.query(Comment.created_at).all()
+    grouped_by_date: OrderedDict[int, OrderedDict[int, int]] = OrderedDict()
+    year_counts: dict[int, int] = {}
+    month_counts: dict[tuple[int, int], int] = {}
+
+    for (created_at,) in created_dates:
+        year = created_at.year
+        month = created_at.month
+
+        year_group = grouped_by_date.setdefault(year, OrderedDict())
+        year_group[month] = year_group.get(month, 0) + 1
+
+        year_counts[year] = year_counts.get(year, 0) + 1
+        month_key = (year, month)
+        month_counts[month_key] = month_counts.get(month_key, 0) + 1
+
+    sorted_grouped_by_date: OrderedDict[int, OrderedDict[int, int]] = OrderedDict()
+    for year in sorted(grouped_by_date.keys(), reverse=True):
+        sorted_grouped_by_date[year] = OrderedDict(
+            (month, grouped_by_date[year][month])
+            for month in sorted(grouped_by_date[year].keys(), reverse=True)
+        )
+
+    selected_month_valid = (
+        selected_year is not None
+        and selected_month is not None
+        and 1 <= selected_month <= 12
+        and selected_year in sorted_grouped_by_date
+        and selected_month in sorted_grouped_by_date[selected_year]
+    )
+
+    selected_month_groups: OrderedDict[str, OrderedDict[str, list[Comment]]] = OrderedDict()
+    pagination = None
+    if selected_month_valid:
+        survey_order_map = _survey_order_map()
+        month_query = (
+            Comment.query
+            .outerjoin(Survey, Comment.survey_code == Survey.code)
+            .filter(
+                db.extract("year", Comment.created_at) == selected_year,
+                db.extract("month", Comment.created_at) == selected_month,
+            )
+            .order_by(
+                Comment.ruref.asc(),
+                Comment.is_general.desc(),
+                Survey.display_order.asc(),
+                Comment.survey_code.asc(),
+                Comment.created_at.desc(),
+                Comment.id.desc(),
+            )
+        )
+        pagination = month_query.paginate(page=page, per_page=per_page, error_out=False)
+
+        month_comments = sorted(
+            pagination.items,
+            key=lambda comment: (
+                comment.ruref,
+                0 if comment.is_general else 1,
+                survey_order_map.get(comment.survey_code or "", 999),
+                comment.survey_code or "",
+                -comment.created_at.timestamp(),
+                -comment.id,
+            ),
+        )
+
+        for comment in month_comments:
+            ruref_group = selected_month_groups.setdefault(comment.ruref, OrderedDict())
+            survey_label = GENERAL_GROUP_KEY if comment.is_general else (comment.survey_code or "Unknown")
+            ruref_group.setdefault(survey_label, []).append(comment)
+
+    month_names = {month: calendar.month_name[month] for month in range(1, 13)}
+
+    return render_template(
+        "comments/by_date.html",
+        grouped_by_date=sorted_grouped_by_date,
+        year_counts=year_counts,
+        month_counts=month_counts,
+        month_names=month_names,
+        selected_year=selected_year if selected_month_valid else None,
+        selected_month=selected_month if selected_month_valid else None,
+        selected_month_groups=selected_month_groups,
+        pagination=pagination,
+    )
 
 
 @bp.get("/contacts-management")

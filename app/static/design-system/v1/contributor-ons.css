@@ -207,6 +207,23 @@ a:focus {
     vertical-align: top;
 }
 
+.by-date-results-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.by-date-results-table col.col-created { width: 16%; }
+.by-date-results-table col.col-period { width: 9%; }
+.by-date-results-table col.col-author { width: 18%; }
+.by-date-results-table col.col-comment { width: 47%; }
+.by-date-results-table col.col-action { width: 10%; }
+
+.by-date-results-table td,
+.by-date-results-table th {
+    word-break: break-word;
+    vertical-align: top;
+}
+
 .survey-metadata-table td,
 .survey-metadata-table th {
     vertical-align: middle;

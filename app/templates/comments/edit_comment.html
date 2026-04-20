@@ -7,7 +7,7 @@
     <p class="ons-page-lead">Updates are tracked in edit history with editor and timestamp.</p>
 </header>
 
-<div class="ons-panel mb-4">
+<div class="mb-4">
     <p><strong>RUREF:</strong> {{ comment.ruref }}</p>
     <p><strong>Scope:</strong> {% if comment.is_general %}General{% else %}Survey {{ comment.survey_code }}{% endif %}</p>
     <p><strong>Period:</strong> {{ comment.period }}</p>
@@ -21,7 +21,7 @@
     </form>
 </div>
 
-<div class="ons-panel">
+<div class="p-3 border rounded bg-white">
     <h2 class="ons-section-title">Edit History</h2>
     {% if comment.edit_history %}
     <div class="table-responsive">

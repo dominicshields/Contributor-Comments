@@ -7,7 +7,7 @@
     <p class="ons-page-lead">Search contacts by RUREF or show all contacts. Contacts are ordered by survey within each RUREF.</p>
 </header>
 
-<div class="ons-panel mb-4">
+<div class="mb-4">
     <h2 class="ons-section-title">Search Contacts</h2>
     <form class="row g-3" method="get" action="{{ url_for('comments.contact_management') }}">
         <div class="col-md-4">
@@ -26,7 +26,7 @@
     <h2 class="ons-section-title">Contact Results</h2>
     {% if grouped_contacts %}
         {% for result_ruref, contacts in grouped_contacts.items() %}
-        <section class="ons-panel mb-4">
+        <section class="mb-4">
             <h3 class="h5">RUREF {{ result_ruref }}</h3>
             {% for contact in contacts %}
             <article class="comment-card">

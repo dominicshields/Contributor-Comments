@@ -119,7 +119,7 @@
     <p class="ons-page-lead">Comments grouped by author, then ordered by RUREF and survey.</p>
 </header>
 
-<div class="ons-panel mb-4">
+<div class="mb-4">
     <h2 class="ons-section-title">Filter</h2>
     <form class="row g-3" method="get" action="{{ url_for('comments.comments_by_author') }}">
         <div class="col-md-6">
@@ -135,7 +135,7 @@
     </form>
 </div>
 
-<div class="ons-panel">
+<div class="p-3 border rounded bg-white">
     <h2 class="ons-section-title">Results</h2>
     {% if comments_by_author %}
         {% for author_id, author_name, author_username in comments_by_author.keys() %}

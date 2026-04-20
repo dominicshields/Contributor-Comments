@@ -20,7 +20,9 @@ def test_create_comment_rejects_invalid_period(client, login_analyst):
     assert b"Period must be in YYYYMM format" in response.data
 
 
-def test_create_comment_rejects_period_not_matching_survey_periodicity(client, login_admin, app):
+def test_create_comment_rejects_period_not_matching_survey_periodicity(
+    client, login_admin, app
+):
     with app.app_context():
         survey = db.session.get(Survey, "221")
         assert survey is not None
@@ -42,7 +44,9 @@ def test_create_comment_rejects_period_not_matching_survey_periodicity(client, l
     assert b"Period month must match the selected survey periodicity." in response.data
 
 
-def test_create_comment_accepts_period_matching_survey_periodicity(client, login_admin, app):
+def test_create_comment_accepts_period_matching_survey_periodicity(
+    client, login_admin, app
+):
     with app.app_context():
         survey = db.session.get(Survey, "221")
         assert survey is not None
@@ -105,7 +109,9 @@ def test_deactivated_survey_not_usable_for_new_comments(client, login_admin, app
         assert survey.is_active is False
 
 
-def test_show_comments_returns_lowest_ten_rurefs_grouped_for_display(client, login_analyst):
+def test_show_comments_returns_lowest_ten_rurefs_grouped_for_display(
+    client, login_analyst
+):
     test_rows = [
         ("00000000005", "221", "202601", "ruref 5 older"),
         ("00000000005", "221", "202602", "ruref 5 newer"),
@@ -144,7 +150,9 @@ def test_show_comments_returns_lowest_ten_rurefs_grouped_for_display(client, log
     assert b"RUREF 00000000001" in response.data
     assert b"RUREF 00000000010" in response.data
     assert b"RUREF 00000000011" not in response.data
-    assert response.data.index(b"RUREF 00000000002") < response.data.index(b"RUREF 00000000005")
+    assert response.data.index(b"RUREF 00000000002") < response.data.index(
+        b"RUREF 00000000005"
+    )
     assert response.data.index(b"Survey 221") < response.data.index(b"Survey 241")
     assert response.data.index(b"ruref 5 newer") < response.data.index(b"ruref 5 older")
 
@@ -164,11 +172,15 @@ def test_show_comments_testing_obeys_contact_visibility_toggle(client, login_ana
         follow_redirects=True,
     )
 
-    response_hidden = client.get("/comments?show_comments=1&show_contacts=0", follow_redirects=True)
+    response_hidden = client.get(
+        "/comments?show_comments=1&show_contacts=0", follow_redirects=True
+    )
     assert response_hidden.status_code == 200
     assert b"pat@example.com" not in response_hidden.data
 
-    response_visible = client.get("/comments?show_comments=1&show_contacts=1", follow_redirects=True)
+    response_visible = client.get(
+        "/comments?show_comments=1&show_contacts=1", follow_redirects=True
+    )
     assert response_visible.status_code == 200
     assert b"pat@example.com" in response_visible.data
 
@@ -263,11 +275,15 @@ def test_search_results_show_contact_info_only_when_toggled_on(client, login_ana
         follow_redirects=True,
     )
 
-    response_hidden = client.get("/comments?ruref=12345678901&show_contacts=0", follow_redirects=True)
+    response_hidden = client.get(
+        "/comments?ruref=12345678901&show_contacts=0", follow_redirects=True
+    )
     assert response_hidden.status_code == 200
     assert b"pat@example.com" not in response_hidden.data
 
-    response_visible = client.get("/comments?ruref=12345678901&show_contacts=1", follow_redirects=True)
+    response_visible = client.get(
+        "/comments?ruref=12345678901&show_contacts=1", follow_redirects=True
+    )
     assert response_visible.status_code == 200
     assert b"pat@example.com" in response_visible.data
 
@@ -302,7 +318,9 @@ def test_search_results_duplicate_show_contacts_uses_last_value(client, login_an
     assert b"pat@example.com" in response_last_one.data
 
 
-def test_search_results_show_name_only_contact_when_toggle_on(client, login_analyst, app):
+def test_search_results_show_name_only_contact_when_toggle_on(
+    client, login_analyst, app
+):
     client.post(
         "/comments/new",
         data={
@@ -315,7 +333,9 @@ def test_search_results_show_name_only_contact_when_toggle_on(client, login_anal
         follow_redirects=True,
     )
 
-    response = client.get("/comments?ruref=12345678905&show_contacts=1", follow_redirects=True)
+    response = client.get(
+        "/comments?ruref=12345678905&show_contacts=1", follow_redirects=True
+    )
     assert response.status_code == 200
     assert b"Name: Only Name" in response.data
     assert b"Telephone: Not provided" in response.data
@@ -385,14 +405,18 @@ def test_create_comment_with_contact_creates_contact_record(client, login_analys
     assert response.status_code == 200
 
     with app.app_context():
-        contact = Contact.query.filter_by(ruref="12345678901", survey_code="221").first()
+        contact = Contact.query.filter_by(
+            ruref="12345678901", survey_code="221"
+        ).first()
         assert contact is not None
         assert contact.name == "Pat Contact"
         assert contact.telephone_number == "0123456789"
         assert contact.email_address == "pat@example.com"
 
 
-def test_create_comment_rejects_duplicate_contact_for_same_scope(client, login_analyst, app):
+def test_create_comment_rejects_duplicate_contact_for_same_scope(
+    client, login_analyst, app
+):
     client.post(
         "/comments/new",
         data={
@@ -422,7 +446,10 @@ def test_create_comment_rejects_duplicate_contact_for_same_scope(client, login_a
     )
 
     assert response.status_code == 200
-    assert b"A contact already exists for this reporting unit and survey 221." in response.data
+    assert (
+        b"A contact already exists for this reporting unit and survey 221."
+        in response.data
+    )
     assert b"Edit Contact" in response.data
 
     with app.app_context():
@@ -457,13 +484,18 @@ def test_check_contact_redirects_to_existing_contact_edit(client, login_analyst)
     )
 
     assert response.status_code == 200
-    assert b"A contact already exists for this reporting unit and survey 221." in response.data
+    assert (
+        b"A contact already exists for this reporting unit and survey 221."
+        in response.data
+    )
     assert b"Edit Contact" in response.data
     assert b"Your draft comment has been preserved." in response.data
     assert b'name="add_comment" value="Draft follow-up"' in response.data
 
 
-def test_check_contact_returns_to_add_form_when_scope_has_no_contact(client, login_analyst):
+def test_check_contact_returns_to_add_form_when_scope_has_no_contact(
+    client, login_analyst
+):
     response = client.post(
         "/comments/check-contact",
         data={
@@ -477,14 +509,19 @@ def test_check_contact_returns_to_add_form_when_scope_has_no_contact(client, log
     )
 
     assert response.status_code == 200
-    assert b"No existing contact was found for this reporting unit and survey 221." in response.data
+    assert (
+        b"No existing contact was found for this reporting unit and survey 221."
+        in response.data
+    )
     assert b'button class="nav-link active" id="add-tab"' in response.data
     assert b'value="12345678901"' in response.data
     assert b"Draft follow-up" in response.data
     assert b"Draft Contact" in response.data
 
 
-def test_edit_contact_returns_to_preserved_add_comment_draft(client, login_analyst, app):
+def test_edit_contact_returns_to_preserved_add_comment_draft(
+    client, login_analyst, app
+):
     client.post(
         "/comments/new",
         data={
@@ -500,7 +537,9 @@ def test_edit_contact_returns_to_preserved_add_comment_draft(client, login_analy
     )
 
     with app.app_context():
-        contact = Contact.query.filter_by(ruref="12345678901", survey_code="221").first()
+        contact = Contact.query.filter_by(
+            ruref="12345678901", survey_code="221"
+        ).first()
         assert contact is not None
         contact_id = contact.id
 
@@ -550,7 +589,9 @@ def test_edit_contact_updates_values(client, login_analyst, app):
     )
 
     with app.app_context():
-        contact = Contact.query.filter_by(ruref="12345678901", survey_code="221").first()
+        contact = Contact.query.filter_by(
+            ruref="12345678901", survey_code="221"
+        ).first()
         assert contact is not None
         contact_id = contact.id
 
@@ -590,11 +631,15 @@ def test_ruref_detail_obeys_contact_toggle(client, login_analyst):
         follow_redirects=True,
     )
 
-    response_off = client.get("/ruref/12345678907?show_contacts=0", follow_redirects=True)
+    response_off = client.get(
+        "/ruref/12345678907?show_contacts=0", follow_redirects=True
+    )
     assert response_off.status_code == 200
     assert b"pat@example.com" not in response_off.data
 
-    response_on = client.get("/ruref/12345678907?show_contacts=1", follow_redirects=True)
+    response_on = client.get(
+        "/ruref/12345678907?show_contacts=1", follow_redirects=True
+    )
     assert response_on.status_code == 200
     assert b"pat@example.com" in response_on.data
 
@@ -687,17 +732,25 @@ def test_contact_management_search_and_show_all(client, login_analyst, app):
         db.session.commit()
         contact_221_id = contact_221.id
 
-    search_response = client.get("/contacts-management?ruref=12345678901", follow_redirects=True)
+    search_response = client.get(
+        "/contacts-management?ruref=12345678901", follow_redirects=True
+    )
     assert search_response.status_code == 200
     assert b"RUREF 12345678901" in search_response.data
     assert b"RUREF 12345678902" not in search_response.data
 
     # General first, then survey display order (221 before 241).
-    assert search_response.data.index(b"General") < search_response.data.index(b"Survey 221")
-    assert search_response.data.index(b"Survey 221") < search_response.data.index(b"Survey 241")
+    assert search_response.data.index(b"General") < search_response.data.index(
+        b"Survey 221"
+    )
+    assert search_response.data.index(b"Survey 221") < search_response.data.index(
+        b"Survey 241"
+    )
     assert f"/contacts/{contact_221_id}/edit".encode() in search_response.data
 
-    show_all_response = client.get("/contacts-management?show_all_contacts=1", follow_redirects=True)
+    show_all_response = client.get(
+        "/contacts-management?show_all_contacts=1", follow_redirects=True
+    )
     assert show_all_response.status_code == 200
     assert b"RUREF 12345678901" in show_all_response.data
     assert b"RUREF 12345678902" in show_all_response.data
@@ -720,13 +773,17 @@ def test_contact_management_removes_orphan_contacts(client, login_analyst, app):
         db.session.add(orphan_contact)
         db.session.commit()
 
-    response = client.get("/contacts-management?show_all_contacts=1", follow_redirects=True)
+    response = client.get(
+        "/contacts-management?show_all_contacts=1", follow_redirects=True
+    )
     assert response.status_code == 200
     assert b"Removed 1 orphan contacts with no matching comments." in response.data
     assert b"Orphan Contact" not in response.data
 
     with app.app_context():
-        still_exists = Contact.query.filter_by(ruref="12345678903", survey_code="221").first()
+        still_exists = Contact.query.filter_by(
+            ruref="12345678903", survey_code="221"
+        ).first()
         assert still_exists is None
 
 
@@ -783,9 +840,13 @@ def test_comments_by_author_filter_and_ordering(client, login_admin, app):
     assert b"analyst1" in response_all.data
     assert b"analyst2" in response_all.data
     assert response_all.data.index(b"analyst1") < response_all.data.index(b"analyst2")
-    assert response_all.data.index(b"12345678001") < response_all.data.index(b"12345678003")
+    assert response_all.data.index(b"12345678001") < response_all.data.index(
+        b"12345678003"
+    )
 
-    response_filtered = client.get("/comments/by-author?author=analyst1", follow_redirects=True)
+    response_filtered = client.get(
+        "/comments/by-author?author=analyst1", follow_redirects=True
+    )
     assert response_filtered.status_code == 200
     assert b"analyst1" in response_filtered.data
     assert b"analyst2" not in response_filtered.data
@@ -797,7 +858,9 @@ def test_comments_by_author_pagination_second_page(client, login_admin, app):
 
         for i in range(55):
             username = f"paging_user_{i:02d}"
-            user = User(username=username, full_name=f"Paging User {i:02d}", is_admin=False)
+            user = User(
+                username=username, full_name=f"Paging User {i:02d}", is_admin=False
+            )
             user.set_password("Password123!")
             db.session.add(user)
             db.session.flush()
@@ -881,7 +944,9 @@ def test_comments_by_author_paginates_authors_not_comments(client, login_admin, 
     assert b"second author marker" in response.data
 
 
-def test_comments_by_author_invalid_page_defaults_to_first_page(client, login_admin, app):
+def test_comments_by_author_invalid_page_defaults_to_first_page(
+    client, login_admin, app
+):
     with app.app_context():
         analyst1 = User.query.filter_by(username="analyst1").first()
         assert analyst1 is not None
@@ -902,7 +967,9 @@ def test_comments_by_author_invalid_page_defaults_to_first_page(client, login_ad
         )
         db.session.commit()
 
-    response = client.get("/comments/by-author?page=not-a-number", follow_redirects=True)
+    response = client.get(
+        "/comments/by-author?page=not-a-number", follow_redirects=True
+    )
 
     assert response.status_code == 200
     assert b"invalid page fallback marker" in response.data
@@ -1025,11 +1092,18 @@ def test_comments_by_date_open_month_shows_grouped_comments(client, login_admin,
 
     assert response.status_code == 200
     assert b"April 2026" in response.data
-    assert response.data.index(b"RUREF 12345678201") < response.data.index(b"RUREF 12345678202")
+    assert response.data.index(b"RUREF 12345678201") < response.data.index(
+        b"RUREF 12345678202"
+    )
     assert response.data.index(b"General") < response.data.index(b"221")
     assert b"open month general" in response.data
     assert b"open month survey" in response.data
     assert b"open month ruref two" in response.data
+    assert b'id="selected-month-results"' in response.data
+    assert (
+        b"/comments/by-date?year=2026&amp;month=4&amp;page=1#selected-month-results"
+        in response.data
+    )
 
 
 def test_comments_by_date_invalid_page_defaults_to_first_page(client, login_admin, app):
@@ -1053,7 +1127,9 @@ def test_comments_by_date_invalid_page_defaults_to_first_page(client, login_admi
         )
         db.session.commit()
 
-    response = client.get("/comments/by-date?year=2026&month=4&page=not-a-number", follow_redirects=True)
+    response = client.get(
+        "/comments/by-date?year=2026&month=4&page=not-a-number", follow_redirects=True
+    )
 
     assert response.status_code == 200
     assert b"by date invalid page marker" in response.data
@@ -1083,14 +1159,26 @@ def test_comments_by_date_month_pagination_second_page(client, login_admin, app)
 
         db.session.commit()
 
-    page_one = client.get("/comments/by-date?year=2026&month=4&page=1", follow_redirects=True)
+    page_one = client.get(
+        "/comments/by-date?year=2026&month=4&page=1", follow_redirects=True
+    )
     assert page_one.status_code == 200
     assert b"month page marker 0" in page_one.data
     assert b"month page marker 49" in page_one.data
     assert b"month page marker 50" not in page_one.data
 
-    page_two = client.get("/comments/by-date?year=2026&month=4&page=2", follow_redirects=True)
+    page_two = client.get(
+        "/comments/by-date?year=2026&month=4&page=2", follow_redirects=True
+    )
     assert page_two.status_code == 200
     assert b"month page marker 50" in page_two.data
     assert b"month page marker 54" in page_two.data
     assert b"month page marker 0" not in page_two.data
+    assert (
+        b"/comments/by-date?year=2026&amp;month=4&amp;page=1#selected-month-results"
+        in page_two.data
+    )
+    assert (
+        b"/comments/by-date?year=2026&amp;month=4&amp;page=2#selected-month-results"
+        in page_two.data
+    )

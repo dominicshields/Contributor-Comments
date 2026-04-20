@@ -66,6 +66,9 @@ def create_app() -> Flask:
     )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["DESIGN_SYSTEM_STYLESHEET"] = "design-system/v1/contributor-ons.css"
+    app.config["ONS_DESIGN_SYSTEM_VERSION"] = os.getenv(
+        "ONS_DESIGN_SYSTEM_VERSION", "73.0.0"
+    )
 
     db.init_app(app)
     login_manager.init_app(app)
@@ -88,9 +91,21 @@ def create_app() -> Flask:
 
     @app.context_processor
     def inject_design_system_css_url() -> dict[str, str]:
+        stylesheet_path = (
+            Path(app.static_folder) / app.config["DESIGN_SYSTEM_STYLESHEET"]
+        )
+        stylesheet_version = (
+            int(stylesheet_path.stat().st_mtime) if stylesheet_path.exists() else 0
+        )
         return {
+            "ons_design_system_css_url": (
+                "https://cdn.ons.gov.uk/sdc/design-system/"
+                f"{app.config['ONS_DESIGN_SYSTEM_VERSION']}/css/main.css"
+            ),
             "design_system_css_url": url_for(
-                "static", filename=app.config["DESIGN_SYSTEM_STYLESHEET"]
+                "static",
+                filename=app.config["DESIGN_SYSTEM_STYLESHEET"],
+                v=stylesheet_version,
             ),
             "auth_mode": app.config["AUTH_MODE"],
         }

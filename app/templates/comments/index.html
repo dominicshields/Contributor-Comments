@@ -32,7 +32,7 @@
             <div>Number of Reporting Units with comments: {{ reporting_units_with_comments }}</div>
             <div>Total comments: {{ total_comments }}</div>
         </div>
-        <div class="ons-panel mb-4">
+        <div class="mb-4">
             <h2 class="ons-section-title">Search</h2>
             <form class="row g-3" method="get" action="{{ url_for('comments.index') }}">
                 <div class="col-md-4">
@@ -109,7 +109,7 @@
             {% if show_comments %}
                 {% if ruref_groups %}
                     {% for result_ruref, grouped_comments in ruref_groups.items() %}
-                    <section class="ons-panel mb-4">
+                    <section class="mb-4">
                         <h3 class="h5">RUREF {{ result_ruref }}</h3>
                         {% for survey_code, survey_comments in grouped_comments.items() %}
                         <section class="mb-3">
@@ -202,7 +202,7 @@
     </div>
 
     <div class="tab-pane fade {% if add_tab_active %}show active{% endif %}" id="add-tab-pane" role="tabpanel" aria-labelledby="add-tab" tabindex="0">
-        <div class="ons-panel mb-4">
+        <div class="mb-4">
             <h2 class="ons-section-title">Add Comment</h2>
             <form method="post" action="{{ url_for('comments.create_comment') }}">
                 <div class="row g-3">

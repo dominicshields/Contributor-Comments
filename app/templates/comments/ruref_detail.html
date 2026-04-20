@@ -18,7 +18,7 @@
     <p class="ons-page-lead">Comments grouped by survey in survey order, with period descending.</p>
 </header>
 
-<div class="ons-panel mb-4">
+<div class="mb-4">
     <h2 class="ons-section-title">Filter This RUREF</h2>
     <form class="row g-3" method="get" action="{{ url_for('comments.ruref_detail', ruref=ruref) }}">
         <div class="col-md-7">
@@ -86,32 +86,34 @@
 </div>
 
 {% if grouped_comments %}
-    {% for survey_code, survey_comments in grouped_comments.items() %}
-    <section class="ons-panel mb-4">
-        <h2 class="ons-section-title">{% if survey_code == 'General' %}General{% else %}Survey {{ survey_code }}{% endif %}</h2>
-        {% for comment in survey_comments %}
-        <article class="comment-card">
-            <p class="comment-period"><strong>{{ comment.period }}</strong></p>
-            <p class="comment-body">{{ comment.comment_text }}</p>
-            {% set contact_key = contact_key_for_comment(comment) %}
-            {% set contact = contacts_by_survey.get(contact_key) %}
-            {% if show_contacts and contact_has_display_name(contact) %}
-            <div class="comment-contact-compact">
-                <strong>Contact:</strong>
-                <span>Name: {{ contact.name }}</span>
-                <span>Telephone: {{ contact.telephone_number or 'Not provided' }}</span>
-                <span>Email: {{ contact.email_address or 'Not provided' }}</span>
-                <a href="{{ url_for('comments.edit_contact', contact_id=contact.id) }}">Edit contact</a>
-            </div>
-            {% endif %}
-            <p class="comment-meta">
-                <span data-bs-toggle="tooltip" title="Created {{ comment.created_at | uk_datetime }} UTC->UK">Author: {{ comment.author.full_name }}</span>
-                <a class="ms-2" href="{{ url_for('comments.edit_comment', comment_id=comment.id) }}">Edit</a>
-            </p>
-        </article>
+    <div class="ons-panel">
+        {% for survey_code, survey_comments in grouped_comments.items() %}
+        <section class="mb-4">
+            <h2 class="ons-section-title">{% if survey_code == 'General' %}General{% else %}Survey {{ survey_code }}{% endif %}</h2>
+            {% for comment in survey_comments %}
+            <article class="comment-card">
+                <p class="comment-period"><strong>{{ comment.period }}</strong></p>
+                <p class="comment-body">{{ comment.comment_text }}</p>
+                {% set contact_key = contact_key_for_comment(comment) %}
+                {% set contact = contacts_by_survey.get(contact_key) %}
+                {% if show_contacts and contact_has_display_name(contact) %}
+                <div class="comment-contact-compact">
+                    <strong>Contact:</strong>
+                    <span>Name: {{ contact.name }}</span>
+                    <span>Telephone: {{ contact.telephone_number or 'Not provided' }}</span>
+                    <span>Email: {{ contact.email_address or 'Not provided' }}</span>
+                    <a href="{{ url_for('comments.edit_contact', contact_id=contact.id) }}">Edit contact</a>
+                </div>
+                {% endif %}
+                <p class="comment-meta">
+                    <span data-bs-toggle="tooltip" title="Created {{ comment.created_at | uk_datetime }} UTC->UK">Author: {{ comment.author.full_name }}</span>
+                    <a class="ms-2" href="{{ url_for('comments.edit_comment', comment_id=comment.id) }}">Edit</a>
+                </p>
+            </article>
+            {% endfor %}
+        </section>
         {% endfor %}
-    </section>
-    {% endfor %}
+    </div>
 {% else %}
     <div class="ons-panel">
         <p class="mb-0">No comments found for this RUREF and filters.</p>

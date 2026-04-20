@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% block title %}Contributor Comments{% endblock %}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ ons_design_system_css_url }}">
     <link rel="stylesheet" href="{{ design_system_css_url }}">
     {% block extra_css %}{% endblock %}
 </head>
@@ -16,62 +14,76 @@
 <a class="ons-skip-link" href="#main-content">Skip to main content</a>
 
 <div class="ons-phase-banner" role="region" aria-label="Service phase">
-    <div class="container">
+    <div class="ons-shell-width ons-phase-banner__inner">
         <span class="ons-phase-tag">BETA</span>
         <span>New service for contributor comment capture and retrieval.</span>
     </div>
 </div>
 
-<nav class="navbar navbar-expand-lg ons-site-header" aria-label="Main navigation">
-    <div class="container-lg">
-        <a class="navbar-brand" href="{{ url_for('comments.index') }}">Contributor Comments</a>
-        {% if current_user.is_authenticated %}
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('comments.index') }}">Search and Add</a>
-                </li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="commentsMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">Comments</a>
-                    <ul class="dropdown-menu" aria-labelledby="commentsMenu">
-                        <li><a class="dropdown-item" href="{{ url_for('comments.comments_by_author') }}">Comments by Author</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('comments.comments_by_date') }}">Comments by Date</a></li>
-                    </ul>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('comments.contact_management') }}">Contact Management</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('admin.surveys') }}">Survey Metadata</a>
-                </li>
-                {% if current_user.is_admin %}
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="systemConfigMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">System Config</a>
-                    <ul class="dropdown-menu" aria-labelledby="systemConfigMenu">
-                        <li><a class="dropdown-item" href="{{ url_for('admin.system_info') }}">System Info</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('admin.bulk_upload_comments') }}">Bulk Upload Comments</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('admin.delete_all_comments_page') }}">Delete all comments and contacts</a></li>
-                    </ul>
-                </li>
-                {% endif %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('comments.help_page') }}">Help</a>
-                </li>
-            </ul>
-            <span class="navbar-text me-3">{{ current_user.full_name }} ({{ current_user.username }})</span>
-            <form action="{{ url_for('auth.logout') }}" method="post" class="d-inline">
-                <button class="btn btn-outline-light btn-sm" type="submit">Logout</button>
-            </form>
+<header class="ons-site-shell" role="banner">
+    <div class="ons-site-shell__masthead">
+        <div class="ons-shell-width ons-site-shell__masthead-inner">
+            <div class="ons-brand-block">
+                <a class="ons-brand-link" href="https://www.ons.gov.uk/">Office for National Statistics</a>
+                <a class="ons-service-link" href="{{ url_for('comments.index') }}">Contributor Comments</a>
+            </div>
+            {% if current_user.is_authenticated %}
+            <div class="ons-user-tools">
+                <span class="ons-user-tools__identity">{{ current_user.full_name }} ({{ current_user.username }})</span>
+                <form action="{{ url_for('auth.logout') }}" method="post">
+                    <button class="btn btn-outline-light btn-sm" type="submit">Logout</button>
+                </form>
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
-</nav>
+
+    {% if current_user.is_authenticated %}
+    <nav class="navbar navbar-expand-lg ons-primary-nav" aria-label="Main navigation">
+        <div class="ons-shell-width ons-primary-nav__container">
+            <button class="navbar-toggler ons-primary-nav__toggle" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavigation" aria-controls="mainNavigation" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="mainNavigation">
+                <ul class="navbar-nav ons-primary-nav__list me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link ons-primary-nav__link {% if request.endpoint == 'comments.index' %}is-active{% endif %}" href="{{ url_for('comments.index') }}">Search and Add</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle ons-primary-nav__link {% if request.endpoint in ['comments.comments_by_author', 'comments.comments_by_date'] %}is-active{% endif %}" href="#" id="commentsMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">Comments</a>
+                        <ul class="dropdown-menu" aria-labelledby="commentsMenu">
+                            <li><a class="dropdown-item {% if request.endpoint == 'comments.comments_by_author' %}active{% endif %}" href="{{ url_for('comments.comments_by_author') }}">Comments by Author</a></li>
+                            <li><a class="dropdown-item {% if request.endpoint == 'comments.comments_by_date' %}active{% endif %}" href="{{ url_for('comments.comments_by_date') }}">Comments by Date</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link ons-primary-nav__link {% if request.endpoint == 'comments.contact_management' %}is-active{% endif %}" href="{{ url_for('comments.contact_management') }}">Contact Management</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link ons-primary-nav__link {% if request.blueprint == 'admin' and request.endpoint in ['admin.surveys', 'admin.add_survey', 'admin.update_survey_metadata', 'admin.toggle_survey_active', 'admin.delete_survey', 'admin.import_surveys'] %}is-active{% endif %}" href="{{ url_for('admin.surveys') }}">Survey Metadata</a>
+                    </li>
+                    {% if current_user.is_admin %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle ons-primary-nav__link {% if request.endpoint in ['admin.system_info', 'admin.bulk_upload_comments', 'admin.bulk_upload_comments_submit', 'admin.delete_all_comments_page', 'admin.delete_all_comments_submit'] %}is-active{% endif %}" href="#" id="systemConfigMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">System Config</a>
+                        <ul class="dropdown-menu" aria-labelledby="systemConfigMenu">
+                            <li><a class="dropdown-item {% if request.endpoint == 'admin.system_info' %}active{% endif %}" href="{{ url_for('admin.system_info') }}">System Info</a></li>
+                            <li><a class="dropdown-item {% if request.endpoint in ['admin.bulk_upload_comments', 'admin.bulk_upload_comments_submit'] %}active{% endif %}" href="{{ url_for('admin.bulk_upload_comments') }}">Bulk Upload Comments</a></li>
+                            <li><a class="dropdown-item {% if request.endpoint in ['admin.delete_all_comments_page', 'admin.delete_all_comments_submit'] %}active{% endif %}" href="{{ url_for('admin.delete_all_comments_page') }}">Delete all comments and contacts</a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link ons-primary-nav__link {% if request.endpoint == 'comments.help_page' %}is-active{% endif %}" href="{{ url_for('comments.help_page') }}">Help</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+</header>
 
 <main id="main-content" class="ons-main" tabindex="-1">
-    <div class="container-lg">
+    <div class="ons-shell-width">
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         {% for category, message in messages %}
@@ -87,6 +99,17 @@
         {% block content %}{% endblock %}
     </div>
 </main>
+
+<footer class="ons-site-footer">
+    <div class="ons-shell-width">
+        <ul class="ons-site-footer__links">
+            <li><a href="{{ url_for('comments.help_page') }}">Help</a></li>
+            <li><a href="https://www.ons.gov.uk/help">Contact us</a></li>
+            <li><a href="https://www.ons.gov.uk/help/privacyanddataprotection/cookiesandprivacy">Cookies and privacy</a></li>
+        </ul>
+        <p class="ons-site-footer__meta mb-0">All content is available under the Open Government Licence v3.0, except where otherwise stated.</p>
+    </div>
+</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>

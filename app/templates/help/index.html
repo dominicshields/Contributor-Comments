@@ -7,7 +7,7 @@
     <p class="ons-page-lead">How to use Contributor Comments day to day.</p>
 </header>
 
-<div class="ons-panel mb-4">
+<section class="mb-4">
     <h2 class="ons-section-title">Search and Add</h2>
     <p><strong>Search tab:</strong> Use one or more filters and select <strong>Run Search</strong>.</p>
     <ul>
@@ -22,18 +22,18 @@
         <li>Period must be valid <strong>YYYYMM</strong>.</li>
         <li>Period month must match survey periodicity rules.</li>
     </ul>
-</div>
+</section>
 
-<div class="ons-panel mb-4">
+<section class="mb-4">
     <h2 class="ons-section-title">Comments Views</h2>
     <p>Use the top navigation <strong>Comments</strong> menu for grouped views.</p>
     <ul>
         <li><strong>Comments by Author</strong>: filter by author name/username, grouped by author with counts, ordered by RUREF then survey, with <strong>Collapse all</strong> / <strong>Expand all</strong> controls.</li>
         <li><strong>Comments by Date</strong>: starts as a collapsed year/month index with counts for all years; selecting a month opens month-specific results grouped by RUREF then survey, with pagination after month selection (50 comments per page).</li>
     </ul>
-</div>
+</section>
 
-<div class="ons-panel mb-4">
+<section class="mb-4">
     <h2 class="ons-section-title">Survey Metadata</h2>
     <p>Use <strong>Survey Metadata</strong> to maintain surveys used by comment capture and search.</p>
     <ul>
@@ -43,9 +43,9 @@
         <li>Use <strong>Delete</strong> to permanently remove a survey and related comments.</li>
         <li>Use <strong>Import Surveys</strong> to upsert from <strong>surveys.csv</strong>.</li>
     </ul>
-</div>
+</section>
 
-<div class="ons-panel mb-4">
+<section class="mb-4">
     <h2 class="ons-section-title">System Config (Admin)</h2>
     <ul>
         <li><strong>System Info</strong>: summary counts, database size, and grouped comment counts.</li>
@@ -55,14 +55,14 @@
     <p><strong>Note:</strong> this destructive utility is temporary and should be retired once the live system is in place.</p>
     <p>Bulk upload CSV required columns: <strong>ruref</strong>, <strong>period</strong>, <strong>comment_text</strong>.</p>
     <p>Optional columns: <strong>survey_code</strong>, <strong>is_general</strong>, <strong>author_name</strong>, <strong>saved_at</strong>, <strong>contact_name</strong>, <strong>contact_phone</strong>, <strong>contact_email</strong>.</p>
-</div>
+</section>
 
-<div class="ons-panel">
+<section>
     <h2 class="ons-section-title">Troubleshooting</h2>
     <ul class="mb-0">
         <li>If no results appear, check RUREF format and selected survey filters.</li>
         <li>If Add Comment fails, check period format and survey periodicity month rules.</li>
         <li>If access is denied to System Config pages, your user may not have admin rights.</li>
     </ul>
-</div>
+</section>
 {% endblock %}

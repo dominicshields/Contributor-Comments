@@ -7,7 +7,7 @@
     <p class="ons-page-lead">Update contact details for this reporting unit and scope.</p>
 </header>
 
-<div class="ons-panel mb-4">
+<div class="mb-4">
     <p><strong>RUREF:</strong> {{ contact.ruref }}</p>
     <p><strong>Scope:</strong> {% if contact.survey_code %}Survey {{ contact.survey_code }}{% else %}General{% endif %}</p>
     {% if has_return_state %}

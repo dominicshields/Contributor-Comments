@@ -256,6 +256,33 @@ Local and dev startup runs:
 ## Getting started for Devs
 ## Local Run
 
+### Python version
+
+- Recommended: Python `3.12.x` (matches the `Dockerfile` and `pipeline.yml` images).
+- Supported: Python `3.9+`.
+
+If you use `uv`, you can install and pin a Python version for this repo:
+
+```bash
+uv python install 3.12
+uv python pin 3.12
+uv venv --python 3.12
+source .venv/bin/activate
+python --version
+```
+
+If you see `command not found: uv`:
+
+- Open a new terminal (or re-source your shell config) so your `PATH` updates take effect.
+- Check where `uv` was installed and ensure it is on `PATH` (common install locations include `~/.local/bin`).
+
+Quick checks:
+
+```bash
+command -v uv
+echo "$PATH" | tr ':' '\n' | grep -E '(\.local/bin|cargo/bin)' || true
+```
+
 ### Conda + uv (recommended if you must use conda)
 
 Run these commands from the repo root:
@@ -345,6 +372,12 @@ If `postgres` already exists, use this instead:
 ALTER DATABASE contributor_comments OWNER TO postgres;
 GRANT ALL PRIVILEGES ON DATABASE contributor_comments TO postgres;
 \q
+```
+
+If database has changed design since you last used it (at the dev phase) drop and re-create
+```bash
+psql -h localhost -U postgres -d postgres -c "DROP DATABASE IF EXISTS contributor_comments;"
+psql -h localhost -U postgres -d postgres -c "CREATE DATABASE contributor_comments;"
 ```
 
 6. Create and load a local environment file:

@@ -2,21 +2,25 @@ from __future__ import annotations
 
 import csv
 import io
-from pathlib import Path
 import re
 import secrets
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+from pathlib import Path
 from time import perf_counter
+from typing import Optional
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import distinct
-from werkzeug.security import generate_password_hash
 
 from ..extensions import db
 from ..models import Comment, CommentEdit, Contact, ReportingUnit, Survey, User
-from ..validation import ALLOWED_SURVEY_PERIODICITIES, is_valid_period, is_valid_ruref, is_valid_survey_periodicity
-
+from ..validation import (
+    ALLOWED_SURVEY_PERIODICITIES,
+    is_valid_period,
+    is_valid_ruref,
+    is_valid_survey_periodicity,
+)
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -29,7 +33,7 @@ PERIODICITY_ALLOWED_MONTHS = {
 }
 
 
-def _parse_forms_per_period(value: str | None) -> int:
+def _parse_forms_per_period(value: Optional[str]) -> int:
     if value is None:
         return 0
 
@@ -64,7 +68,7 @@ def _is_period_allowed_for_survey(survey: Survey, period: str) -> bool:
     return _month_allowed_for_survey(survey.code, survey.periodicity, month)
 
 
-def _parse_saved_at(value: str | None) -> datetime | None:
+def _parse_saved_at(value: Optional[str]) -> Optional[datetime]:
     if value is None:
         return None
 
@@ -75,7 +79,7 @@ def _parse_saved_at(value: str | None) -> datetime | None:
     for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
         try:
             parsed = datetime.strptime(raw, fmt)
-            return parsed.replace(tzinfo=UTC)
+            return parsed.replace(tzinfo=timezone.utc)
         except ValueError:
             continue
 
@@ -108,8 +112,8 @@ def _resolve_author(author_name: str, fallback_user: User) -> User:
         username=username,
         full_name=author_name.strip(),
         is_admin=False,
-        password_hash=generate_password_hash(secrets.token_urlsafe(24)),
     )
+    user.set_password(secrets.token_urlsafe(32))
     db.session.add(user)
     db.session.flush()
     return user
@@ -139,7 +143,9 @@ def _database_size_display() -> str:
     backend_name = engine.url.get_backend_name()
 
     if backend_name == "postgresql":
-        size_bytes = db.session.execute(db.text("SELECT pg_database_size(current_database())")).scalar()
+        size_bytes = db.session.execute(
+            db.text("SELECT pg_database_size(current_database())")
+        ).scalar()
         return _format_size(int(size_bytes or 0))
 
     if backend_name == "sqlite":
@@ -301,14 +307,22 @@ def delete_survey(code: str):
 
     comment_ids = [
         comment_id
-        for (comment_id,) in db.session.query(Comment.id).filter(Comment.survey_code == code).all()
+        for (comment_id,) in db.session.query(Comment.id)
+        .filter(Comment.survey_code == code)
+        .all()
     ]
 
     deleted_comments = 0
-    deleted_contacts = Contact.query.filter(Contact.survey_code == code).delete(synchronize_session=False)
+    deleted_contacts = Contact.query.filter(Contact.survey_code == code).delete(
+        synchronize_session=False
+    )
     if comment_ids:
-        CommentEdit.query.filter(CommentEdit.comment_id.in_(comment_ids)).delete(synchronize_session=False)
-        deleted_comments = Comment.query.filter(Comment.survey_code == code).delete(synchronize_session=False)
+        CommentEdit.query.filter(CommentEdit.comment_id.in_(comment_ids)).delete(
+            synchronize_session=False
+        )
+        deleted_comments = Comment.query.filter(Comment.survey_code == code).delete(
+            synchronize_session=False
+        )
 
     db.session.delete(survey)
     db.session.commit()
@@ -422,7 +436,9 @@ def bulk_upload_comments_submit():
     started_at = perf_counter()
 
     for row in reader:
-        row_normalized = {str(k).strip().lower(): (v or "").strip() for k, v in row.items()}
+        row_normalized = {
+            str(k).strip().lower(): (v or "").strip() for k, v in row.items()
+        }
 
         ruref = row_normalized.get("ruref", "")
         survey_code = row_normalized.get("survey_code", "")
@@ -482,7 +498,9 @@ def bulk_upload_comments_submit():
 
         if contact_name or contact_phone or contact_email:
             contact_scope = survey_code if not is_general else None
-            existing_contact = Contact.query.filter_by(ruref=ruref, survey_code=contact_scope).first()
+            existing_contact = Contact.query.filter_by(
+                ruref=ruref, survey_code=contact_scope
+            ).first()
 
             if existing_contact is None:
                 db.session.add(
@@ -519,9 +537,13 @@ def system_info():
     if not _ensure_admin():
         return redirect(url_for("comments.index"))
 
-    reporting_units_with_comments = db.session.query(db.func.count(distinct(Comment.ruref))).scalar() or 0
+    reporting_units_with_comments = (
+        db.session.query(db.func.count(distinct(Comment.ruref))).scalar() or 0
+    )
     total_comments = db.session.query(db.func.count(Comment.id)).scalar() or 0
-    total_comment_authors = db.session.query(db.func.count(distinct(Comment.author_id))).scalar() or 0
+    total_comment_authors = (
+        db.session.query(db.func.count(distinct(Comment.author_id))).scalar() or 0
+    )
     database_size = _database_size_display()
 
     comments_by_survey = (
@@ -537,16 +559,24 @@ def system_info():
         .all()
     )
 
-    reporting_units_with_contacts = db.session.query(db.func.count(distinct(Contact.ruref))).scalar() or 0
+    reporting_units_with_contacts = (
+        db.session.query(db.func.count(distinct(Contact.ruref))).scalar() or 0
+    )
     total_contacts = db.session.query(db.func.count(Contact.id)).scalar() or 0
 
     contacts_by_scope = (
         db.session.query(
-            db.case((Contact.survey_code.is_(None), "General"), else_=Contact.survey_code),
+            db.case(
+                (Contact.survey_code.is_(None), "General"), else_=Contact.survey_code
+            ),
             db.func.count(Contact.id),
         )
         .group_by(Contact.survey_code)
-        .order_by(db.case((Contact.survey_code.is_(None), "000"), else_=Contact.survey_code).asc())
+        .order_by(
+            db.case(
+                (Contact.survey_code.is_(None), "000"), else_=Contact.survey_code
+            ).asc()
+        )
         .all()
     )
 
@@ -571,7 +601,9 @@ def delete_all_comments_page():
         return redirect(url_for("comments.index"))
 
     comment_count = db.session.query(db.func.count(Comment.id)).scalar() or 0
-    return render_template("admin/delete_all_comments.html", comment_count=comment_count)
+    return render_template(
+        "admin/delete_all_comments.html", comment_count=comment_count
+    )
 
 
 @bp.post("/system-config/delete-all-comments")
@@ -593,5 +625,3 @@ def delete_all_comments_submit():
         "success",
     )
     return redirect(url_for("admin.delete_all_comments_page"))
-
-

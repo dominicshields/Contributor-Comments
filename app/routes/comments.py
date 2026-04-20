@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import calendar
 from collections import OrderedDict
+from typing import Optional
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -10,7 +11,6 @@ from sqlalchemy import distinct, or_
 from ..extensions import db
 from ..models import Comment, CommentEdit, Contact, ReportingUnit, Survey, User
 from ..validation import is_period_allowed_for_survey, is_valid_period, is_valid_ruref
-
 
 bp = Blueprint("comments", __name__)
 GENERAL_GROUP_KEY = "General"
@@ -55,18 +55,21 @@ def _add_comment_return_state(source) -> dict[str, str]:
 
 
 def _has_add_comment_return_state(state: dict[str, str]) -> bool:
-    return any(
-        state[key]
-        for key in (
-            "add_ruref",
-            "add_survey",
-            "add_period",
-            "add_comment",
-            "add_contact_name",
-            "add_contact_phone",
-            "add_contact_email",
+    return (
+        any(
+            state[key]
+            for key in (
+                "add_ruref",
+                "add_survey",
+                "add_period",
+                "add_comment",
+                "add_contact_name",
+                "add_contact_phone",
+                "add_contact_email",
+            )
         )
-    ) or state.get("add_is_general") == "1"
+        or state.get("add_is_general") == "1"
+    )
 
 
 def _format_count_for_display(value: int) -> str:
@@ -108,30 +111,30 @@ def _sort_comments_for_ruref_display(comments: list[Comment]) -> list[Comment]:
     )
 
 
-def _contact_key_for_comment(comment: Comment) -> str | None:
+def _contact_key_for_comment(comment: Comment) -> Optional[str]:
     if comment.is_general:
         return None
     return comment.survey_code
 
 
-def _contact_has_display_name(contact: Contact | None) -> bool:
+def _contact_has_display_name(contact: Optional[Contact]) -> bool:
     if contact is None:
         return False
 
     return bool(contact.name.strip())
 
 
-def _contacts_for_ruref(ruref: str) -> dict[str | None, Contact]:
+def _contacts_for_ruref(ruref: str) -> dict[Optional[str], Contact]:
     contacts = Contact.query.filter_by(ruref=ruref).all()
     return {contact.survey_code: contact for contact in contacts}
 
 
-def _contacts_for_rurefs(rurefs: set[str]) -> dict[str, dict[str | None, Contact]]:
+def _contacts_for_rurefs(rurefs: set[str]) -> dict[str, dict[Optional[str], Contact]]:
     if not rurefs:
         return {}
 
     contacts = Contact.query.filter(Contact.ruref.in_(sorted(rurefs))).all()
-    contacts_by_ruref: dict[str, dict[str | None, Contact]] = {}
+    contacts_by_ruref: dict[str, dict[Optional[str], Contact]] = {}
     for contact in contacts:
         contacts_by_ruref.setdefault(contact.ruref, {})[contact.survey_code] = contact
 
@@ -154,9 +157,17 @@ def _sort_contacts_for_display(contacts: list[Contact]) -> list[Contact]:
 
 def _contact_has_matching_comment(contact: Contact) -> bool:
     if contact.survey_code is None:
-        return Comment.query.filter_by(ruref=contact.ruref, is_general=True).first() is not None
+        return (
+            Comment.query.filter_by(ruref=contact.ruref, is_general=True).first()
+            is not None
+        )
 
-    return Comment.query.filter_by(ruref=contact.ruref, survey_code=contact.survey_code).first() is not None
+    return (
+        Comment.query.filter_by(
+            ruref=contact.ruref, survey_code=contact.survey_code
+        ).first()
+        is not None
+    )
 
 
 def _cleanup_orphan_contacts() -> int:
@@ -173,7 +184,9 @@ def _cleanup_orphan_contacts() -> int:
     return len(orphan_ids)
 
 
-def _load_lowest_ruref_comment_groups(limit: int = 10) -> OrderedDict[str, OrderedDict[str, list[Comment]]]:
+def _load_lowest_ruref_comment_groups(
+    limit: int = 10,
+) -> OrderedDict[str, OrderedDict[str, list[Comment]]]:
     rurefs = [
         row[0]
         for row in db.session.query(distinct(Comment.ruref))
@@ -192,7 +205,9 @@ def _load_lowest_ruref_comment_groups(limit: int = 10) -> OrderedDict[str, Order
         comments_by_ruref.setdefault(comment.ruref, []).append(comment)
 
     for ruref in rurefs:
-        grouped_by_ruref[ruref] = _group_comments(_sort_comments_for_ruref_display(comments_by_ruref[ruref]))
+        grouped_by_ruref[ruref] = _group_comments(
+            _sort_comments_for_ruref_display(comments_by_ruref[ruref])
+        )
 
     return grouped_by_ruref
 
@@ -216,12 +231,18 @@ def index():
     add_contact_email = request.args.get("add_contact_email", "").strip()
     search_performed = show_comments or bool(ruref or query_text or selected_surveys)
 
-    surveys = Survey.query.filter_by(is_active=True).order_by(Survey.display_order.asc()).all()
+    surveys = (
+        Survey.query.filter_by(is_active=True)
+        .order_by(Survey.display_order.asc())
+        .all()
+    )
     comments = []
     grouped_results = OrderedDict()
     ruref_groups = OrderedDict()
-    contacts_by_ruref: dict[str, dict[str | None, Contact]] = {}
-    reporting_units_with_comments = db.session.query(db.func.count(distinct(Comment.ruref))).scalar() or 0
+    contacts_by_ruref: dict[str, dict[Optional[str], Contact]] = {}
+    reporting_units_with_comments = (
+        db.session.query(db.func.count(distinct(Comment.ruref))).scalar() or 0
+    )
     total_comments = db.session.query(db.func.count(Comment.id)).scalar() or 0
 
     if show_comments:
@@ -238,7 +259,10 @@ def index():
 
         if selected_surveys:
             comment_query = comment_query.filter(
-                or_(Comment.survey_code.in_(selected_surveys), Comment.is_general.is_(True))
+                or_(
+                    Comment.survey_code.in_(selected_surveys),
+                    Comment.is_general.is_(True),
+                )
             )
 
         if query_text:
@@ -255,7 +279,9 @@ def index():
             )
 
         comments = (
-            comment_query.order_by(Comment.period.desc(), Comment.created_at.desc()).limit(300).all()
+            comment_query.order_by(Comment.period.desc(), Comment.created_at.desc())
+            .limit(300)
+            .all()
         )
         grouped_results = _group_comments(comments)
 
@@ -280,7 +306,9 @@ def index():
         contact_key_for_comment=_contact_key_for_comment,
         search_performed=search_performed,
         show_comments=show_comments,
-        reporting_units_with_comments=_format_count_for_display(reporting_units_with_comments),
+        reporting_units_with_comments=_format_count_for_display(
+            reporting_units_with_comments
+        ),
         total_comments=_format_count_for_display(total_comments),
         surveys=surveys,
         selected_surveys=selected_surveys,
@@ -311,9 +339,8 @@ def comments_by_author():
     page = request.args.get("page", default=1, type=int)
     per_page = 50
 
-    author_query = (
-        db.session.query(User.id, User.full_name, User.username)
-        .join(Comment, Comment.author_id == User.id)
+    author_query = db.session.query(User.id, User.full_name, User.username).join(
+        Comment, Comment.author_id == User.id
     )
 
     if author_filter:
@@ -325,7 +352,9 @@ def comments_by_author():
             )
         )
 
-    author_query = author_query.group_by(User.id, User.full_name, User.username).order_by(
+    author_query = author_query.group_by(
+        User.id, User.full_name, User.username
+    ).order_by(
         User.full_name.asc(),
         User.username.asc(),
     )
@@ -337,8 +366,7 @@ def comments_by_author():
     comments: list[Comment] = []
     if page_author_ids:
         comments = (
-            Comment.query
-            .join(User, Comment.author_id == User.id)
+            Comment.query.join(User, Comment.author_id == User.id)
             .outerjoin(Survey, Comment.survey_code == Survey.code)
             .filter(Comment.author_id.in_(page_author_ids))
             .order_by(
@@ -356,7 +384,11 @@ def comments_by_author():
 
     comments_by_author: OrderedDict[tuple[int, str, str], list[Comment]] = OrderedDict()
     for comment in comments:
-        author_key = (comment.author.id, comment.author.full_name, comment.author.username)
+        author_key = (
+            comment.author.id,
+            comment.author.full_name,
+            comment.author.username,
+        )
         comments_by_author.setdefault(author_key, []).append(comment)
 
     counts_by_author = {}
@@ -417,13 +449,14 @@ def comments_by_date():
         and selected_month in sorted_grouped_by_date[selected_year]
     )
 
-    selected_month_groups: OrderedDict[str, OrderedDict[str, list[Comment]]] = OrderedDict()
+    selected_month_groups: OrderedDict[str, OrderedDict[str, list[Comment]]] = (
+        OrderedDict()
+    )
     pagination = None
     if selected_month_valid:
         survey_order_map = _survey_order_map()
         month_query = (
-            Comment.query
-            .outerjoin(Survey, Comment.survey_code == Survey.code)
+            Comment.query.outerjoin(Survey, Comment.survey_code == Survey.code)
             .filter(
                 db.extract("year", Comment.created_at) == selected_year,
                 db.extract("month", Comment.created_at) == selected_month,
@@ -453,7 +486,11 @@ def comments_by_date():
 
         for comment in month_comments:
             ruref_group = selected_month_groups.setdefault(comment.ruref, OrderedDict())
-            survey_label = GENERAL_GROUP_KEY if comment.is_general else (comment.survey_code or "Unknown")
+            survey_label = (
+                GENERAL_GROUP_KEY
+                if comment.is_general
+                else (comment.survey_code or "Unknown")
+            )
             ruref_group.setdefault(survey_label, []).append(comment)
 
     month_names = {month: calendar.month_name[month] for month in range(1, 13)}
@@ -476,7 +513,10 @@ def comments_by_date():
 def contact_management():
     deleted_orphans = _cleanup_orphan_contacts()
     if deleted_orphans:
-        flash(f"Removed {deleted_orphans} orphan contacts with no matching comments.", "info")
+        flash(
+            f"Removed {deleted_orphans} orphan contacts with no matching comments.",
+            "info",
+        )
 
     ruref = request.args.get("ruref", "").strip()
     show_all_contacts = _query_flag("show_all_contacts", default=False)
@@ -519,7 +559,9 @@ def create_comment():
     valid = True
 
     if not is_valid_ruref(ruref):
-        flash("Reporting Unit Reference must be exactly 11 numeric characters.", "error")
+        flash(
+            "Reporting Unit Reference must be exactly 11 numeric characters.", "error"
+        )
         valid = False
 
     if not is_valid_period(period):
@@ -527,7 +569,7 @@ def create_comment():
         valid = False
 
     survey = None
-    contact_survey_code: str | None = None
+    contact_survey_code: Optional[str] = None
 
     if not is_general:
         survey = db.session.get(Survey, survey_code)
@@ -546,14 +588,22 @@ def create_comment():
     has_contact_input = bool(contact_name or contact_phone or contact_email)
     existing_contact = None
     if has_contact_input:
-        existing_contact = Contact.query.filter_by(ruref=ruref, survey_code=contact_survey_code).first()
+        existing_contact = Contact.query.filter_by(
+            ruref=ruref, survey_code=contact_survey_code
+        ).first()
         if existing_contact is not None:
-            scope = "general comment" if contact_survey_code is None else f"survey {contact_survey_code}"
+            scope = (
+                "general comment"
+                if contact_survey_code is None
+                else f"survey {contact_survey_code}"
+            )
             flash(
                 f"A contact already exists for this reporting unit and {scope}. Edit the existing contact instead.",
                 "error",
             )
-            return redirect(url_for("comments.edit_contact", contact_id=existing_contact.id))
+            return redirect(
+                url_for("comments.edit_contact", contact_id=existing_contact.id)
+            )
 
     if not valid:
         return redirect(url_for("comments.index", ruref=ruref))
@@ -599,10 +649,12 @@ def check_contact():
     redirect_params = _add_comment_form_state(request.form)
 
     if not is_valid_ruref(ruref):
-        flash("Reporting Unit Reference must be exactly 11 numeric characters.", "error")
+        flash(
+            "Reporting Unit Reference must be exactly 11 numeric characters.", "error"
+        )
         return redirect(url_for("comments.index", **redirect_params))
 
-    contact_survey_code: str | None = None
+    contact_survey_code: Optional[str] = None
     if not is_general:
         survey = db.session.get(Survey, survey_code)
         if survey is None or not survey.is_active:
@@ -610,16 +662,32 @@ def check_contact():
             return redirect(url_for("comments.index", **redirect_params))
         contact_survey_code = survey_code
 
-    existing_contact = Contact.query.filter_by(ruref=ruref, survey_code=contact_survey_code).first()
+    existing_contact = Contact.query.filter_by(
+        ruref=ruref, survey_code=contact_survey_code
+    ).first()
     if existing_contact is not None:
-        scope = "general comment" if contact_survey_code is None else f"survey {contact_survey_code}"
+        scope = (
+            "general comment"
+            if contact_survey_code is None
+            else f"survey {contact_survey_code}"
+        )
         flash(
             f"A contact already exists for this reporting unit and {scope}. Edit the existing contact instead.",
             "info",
         )
-        return redirect(url_for("comments.edit_contact", contact_id=existing_contact.id, **redirect_params))
+        return redirect(
+            url_for(
+                "comments.edit_contact",
+                contact_id=existing_contact.id,
+                **redirect_params,
+            )
+        )
 
-    scope = "general comment" if contact_survey_code is None else f"survey {contact_survey_code}"
+    scope = (
+        "general comment"
+        if contact_survey_code is None
+        else f"survey {contact_survey_code}"
+    )
     flash(f"No existing contact was found for this reporting unit and {scope}.", "info")
     return redirect(url_for("comments.index", **redirect_params))
 
@@ -643,14 +711,20 @@ def ruref_detail(ruref: str):
         )
 
     if query_text:
-        comment_query = comment_query.filter(Comment.comment_text.ilike(f"%{query_text}%"))
+        comment_query = comment_query.filter(
+            Comment.comment_text.ilike(f"%{query_text}%")
+        )
 
     comments = comment_query.all()
     comments = _sort_comments_for_ruref_display(comments)
 
     grouped_comments = _group_comments(comments)
     contacts_by_survey = _contacts_for_ruref(ruref)
-    surveys = Survey.query.filter_by(is_active=True).order_by(Survey.display_order.asc()).all()
+    surveys = (
+        Survey.query.filter_by(is_active=True)
+        .order_by(Survey.display_order.asc())
+        .all()
+    )
 
     return render_template(
         "comments/ruref_detail.html",

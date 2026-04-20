@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from datetime import datetime, timezone
+from typing import Optional
 
 from flask_login import UserMixin
 from sqlalchemy import (
@@ -101,7 +102,7 @@ class Comment(db.Model):
     ruref: Mapped[str] = mapped_column(
         String(11), ForeignKey("reporting_units.ruref"), nullable=False, index=True
     )
-    survey_code: Mapped[str | None] = mapped_column(
+    survey_code: Mapped[Optional[str]] = mapped_column(
         String(3), ForeignKey("surveys.code"), nullable=True, index=True
     )
     is_general: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -125,7 +126,7 @@ class Comment(db.Model):
     reporting_unit: Mapped[ReportingUnit] = relationship(
         "ReportingUnit", back_populates="comments"
     )
-    survey: Mapped[Survey | None] = relationship("Survey", back_populates="comments")
+    survey: Mapped[Optional[Survey]] = relationship("Survey", back_populates="comments")
     author: Mapped[User] = relationship("User", back_populates="comments")
     edit_history: Mapped[list[CommentEdit]] = relationship(
         "CommentEdit", back_populates="comment", order_by="desc(CommentEdit.edited_at)"
@@ -170,11 +171,13 @@ class Contact(db.Model):
     ruref: Mapped[str] = mapped_column(
         String(11), ForeignKey("reporting_units.ruref"), nullable=False, index=True
     )
-    survey_code: Mapped[str | None] = mapped_column(
+    survey_code: Mapped[Optional[str]] = mapped_column(
         String(3), ForeignKey("surveys.code"), nullable=True, index=True
     )
     name: Mapped[str] = mapped_column(String(120), nullable=False, default="")
-    telephone_number: Mapped[str] = mapped_column(String(50), nullable=False, default="")
+    telephone_number: Mapped[str] = mapped_column(
+        String(50), nullable=False, default=""
+    )
     email_address: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -188,8 +191,10 @@ class Contact(db.Model):
         nullable=False,
     )
 
-    reporting_unit: Mapped[ReportingUnit] = relationship("ReportingUnit", back_populates="contacts")
-    survey: Mapped[Survey | None] = relationship("Survey", back_populates="contacts")
+    reporting_unit: Mapped[ReportingUnit] = relationship(
+        "ReportingUnit", back_populates="contacts"
+    )
+    survey: Mapped[Optional[Survey]] = relationship("Survey", back_populates="contacts")
 
     __table_args__ = (
         CheckConstraint("length(ruref) = 11", name="ck_contacts_ruref_len"),

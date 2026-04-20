@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import os
 import re
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+from typing import Optional
 from zoneinfo import ZoneInfo
 
 from alembic import command
@@ -15,7 +16,6 @@ from markupsafe import Markup, escape
 from .extensions import csrf, db, login_manager
 from .models import User
 from .seed import seed_reference_data
-
 
 LOCAL_ENVS = {"dev", "development", "local", "test"}
 
@@ -42,7 +42,8 @@ def create_app() -> Flask:
 
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key")
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
-        "DATABASE_URL", "postgresql+psycopg://postgres:postgres@localhost:5432/contributor_comments"
+        "DATABASE_URL",
+        "postgresql+psycopg://postgres:postgres@localhost:5432/contributor_comments",
     )
     app.config["APP_ENV"] = os.getenv("APP_ENV", "dev").lower()
 
@@ -54,9 +55,15 @@ def create_app() -> Flask:
         )
 
     app.config["AUTH_MODE"] = (auth_mode_env or "sso").lower()
-    app.config["SSO_HEADER_USERNAME"] = os.getenv("SSO_HEADER_USERNAME", "X-Forwarded-User")
-    app.config["SSO_HEADER_FULL_NAME"] = os.getenv("SSO_HEADER_FULL_NAME", "X-Forwarded-Name")
-    app.config["SSO_AUTO_PROVISION"] = os.getenv("SSO_AUTO_PROVISION", "true").lower() == "true"
+    app.config["SSO_HEADER_USERNAME"] = os.getenv(
+        "SSO_HEADER_USERNAME", "X-Forwarded-User"
+    )
+    app.config["SSO_HEADER_FULL_NAME"] = os.getenv(
+        "SSO_HEADER_FULL_NAME", "X-Forwarded-Name"
+    )
+    app.config["SSO_AUTO_PROVISION"] = (
+        os.getenv("SSO_AUTO_PROVISION", "true").lower() == "true"
+    )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["DESIGN_SYSTEM_STYLESHEET"] = "design-system/v1/contributor-ons.css"
 
@@ -82,7 +89,9 @@ def create_app() -> Flask:
     @app.context_processor
     def inject_design_system_css_url() -> dict[str, str]:
         return {
-            "design_system_css_url": url_for("static", filename=app.config["DESIGN_SYSTEM_STYLESHEET"]),
+            "design_system_css_url": url_for(
+                "static", filename=app.config["DESIGN_SYSTEM_STYLESHEET"]
+            ),
             "auth_mode": app.config["AUTH_MODE"],
         }
 
@@ -90,13 +99,15 @@ def create_app() -> Flask:
     def disable_cache_for_html(response):
         # Dynamic pages should not be cached to avoid stale UI state across refresh/navigation.
         if response.mimetype == "text/html":
-            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            response.headers["Cache-Control"] = (
+                "no-store, no-cache, must-revalidate, max-age=0"
+            )
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
         return response
 
     @app.template_filter("uk_datetime")
-    def uk_datetime_filter(value: datetime | None) -> str:
+    def uk_datetime_filter(value: Optional[datetime]) -> str:
         if value is None:
             return ""
 
@@ -104,7 +115,7 @@ def create_app() -> Flask:
         return value.astimezone(london).strftime("%d %b %Y %H:%M")
 
     @app.template_filter("highlight_term")
-    def highlight_term_filter(value: str | None, term: str | None) -> Markup:
+    def highlight_term_filter(value: Optional[str], term: Optional[str]) -> Markup:
         if value is None:
             return Markup("")
 
@@ -117,12 +128,16 @@ def create_app() -> Flask:
             return Markup(str(escaped_value))
 
         pattern = re.compile(re.escape(cleaned_term), re.IGNORECASE)
-        highlighted = pattern.sub(lambda match: f"<mark>{match.group(0)}</mark>", str(escaped_value))
+        highlighted = pattern.sub(
+            lambda match: f"<mark>{match.group(0)}</mark>", str(escaped_value)
+        )
         return Markup(highlighted)
 
     with app.app_context():
         if app.config["APP_ENV"] in LOCAL_ENVS:
-            if _should_run_alembic_for_local(app.config["APP_ENV"], app.config["SQLALCHEMY_DATABASE_URI"]):
+            if _should_run_alembic_for_local(
+                app.config["APP_ENV"], app.config["SQLALCHEMY_DATABASE_URI"]
+            ):
                 _run_alembic_upgrade(app.config["SQLALCHEMY_DATABASE_URI"])
             db.create_all()
             seed_reference_data()
@@ -133,5 +148,5 @@ def create_app() -> Flask:
 
 
 @login_manager.user_loader
-def load_user(user_id: str) -> User | None:
+def load_user(user_id: str) -> Optional[User]:
     return db.session.get(User, int(user_id))

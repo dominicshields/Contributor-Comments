@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import secrets
+from typing import Optional
 
 from flask import (
     Blueprint,
@@ -19,7 +20,7 @@ from ..models import User
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 
-def _sso_sign_in_from_headers() -> tuple[bool, str | None]:
+def _sso_sign_in_from_headers() -> tuple[bool, Optional[str]]:
     username_header = current_app.config["SSO_HEADER_USERNAME"]
     full_name_header = current_app.config["SSO_HEADER_FULL_NAME"]
     auto_provision = current_app.config["SSO_AUTO_PROVISION"]

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import io
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from app.extensions import db
 from app.models import Comment, CommentEdit, Contact, ReportingUnit, Survey, User
@@ -20,7 +20,9 @@ def test_system_config_menu_includes_bulk_upload_for_admin(client, login_admin):
     assert b"Survey Metadata" in response.data
 
 
-def test_survey_metadata_nav_visible_to_non_admin_but_not_system_config(client, login_analyst):
+def test_survey_metadata_nav_visible_to_non_admin_but_not_system_config(
+    client, login_analyst
+):
     response = client.get("/comments", follow_redirects=True)
     assert response.status_code == 200
     assert b"Comments" in response.data
@@ -31,13 +33,17 @@ def test_survey_metadata_nav_visible_to_non_admin_but_not_system_config(client, 
 
 
 def test_bulk_upload_page_requires_admin(client, login_analyst):
-    response = client.get("/admin/system-config/bulk-upload-comments", follow_redirects=True)
+    response = client.get(
+        "/admin/system-config/bulk-upload-comments", follow_redirects=True
+    )
     assert response.status_code == 200
     assert b"Admin access required" in response.data
 
 
 def test_delete_all_comments_page_requires_admin(client, login_analyst):
-    response = client.get("/admin/system-config/delete-all-comments", follow_redirects=True)
+    response = client.get(
+        "/admin/system-config/delete-all-comments", follow_redirects=True
+    )
     assert response.status_code == 200
     assert b"Admin access required" in response.data
 
@@ -48,7 +54,9 @@ def test_system_info_page_requires_admin(client, login_analyst):
     assert b"Admin access required" in response.data
 
 
-def test_bulk_upload_comments_imports_valid_rows_and_skips_invalid(client, login_admin, app):
+def test_bulk_upload_comments_imports_valid_rows_and_skips_invalid(
+    client, login_admin, app
+):
     with app.app_context():
         survey_221 = db.session.get(Survey, "221")
         assert survey_221 is not None
@@ -82,7 +90,9 @@ def test_bulk_upload_comments_imports_valid_rows_and_skips_invalid(client, login
         assert comments[0].period == "202312"
 
 
-def test_bulk_upload_comments_imports_general_rows_with_is_general_flag(client, login_admin, app):
+def test_bulk_upload_comments_imports_general_rows_with_is_general_flag(
+    client, login_admin, app
+):
     csv_text = "\n".join(
         [
             "ruref,period,comment_text,is_general,survey_code,author_name,saved_at",
@@ -107,7 +117,9 @@ def test_bulk_upload_comments_imports_general_rows_with_is_general_flag(client, 
         assert comments[0].survey_code is None
 
 
-def test_bulk_upload_comments_treats_blank_survey_as_general_comment(client, login_admin, app):
+def test_bulk_upload_comments_treats_blank_survey_as_general_comment(
+    client, login_admin, app
+):
     csv_text = "\n".join(
         [
             "ruref,period,comment_text,survey_code,author_name,saved_at",
@@ -132,7 +144,9 @@ def test_bulk_upload_comments_treats_blank_survey_as_general_comment(client, log
         assert comments[0].survey_code is None
 
 
-def test_bulk_upload_comments_creates_contact_from_contact_columns(client, login_admin, app):
+def test_bulk_upload_comments_creates_contact_from_contact_columns(
+    client, login_admin, app
+):
     csv_text = "\n".join(
         [
             "ruref,survey_code,period,comment_text,contact_name,contact_phone,contact_email",
@@ -150,14 +164,18 @@ def test_bulk_upload_comments_creates_contact_from_contact_columns(client, login
     assert response.status_code == 200
 
     with app.app_context():
-        contact = Contact.query.filter_by(ruref="12345678913", survey_code="221").first()
+        contact = Contact.query.filter_by(
+            ruref="12345678913", survey_code="221"
+        ).first()
         assert contact is not None
         assert contact.name == "Pat Contact"
         assert contact.telephone_number == "07123456789"
         assert contact.email_address == "pat@example.com"
 
 
-def test_bulk_upload_comments_upserts_contact_without_duplicate_scope(client, login_admin, app):
+def test_bulk_upload_comments_upserts_contact_without_duplicate_scope(
+    client, login_admin, app
+):
     csv_text = "\n".join(
         [
             "ruref,survey_code,period,comment_text,contact_name,contact_phone,contact_email",
@@ -183,7 +201,9 @@ def test_bulk_upload_comments_upserts_contact_without_duplicate_scope(client, lo
         assert contacts[0].email_address == "updated@example.com"
 
 
-def test_delete_all_comments_removes_comments_and_edit_history(client, login_admin, app):
+def test_delete_all_comments_removes_comments_and_edit_history(
+    client, login_admin, app
+):
     with app.app_context():
         survey = db.session.get(Survey, "221")
         assert survey is not None
@@ -205,8 +225,8 @@ def test_delete_all_comments_removes_comments_and_edit_history(client, login_adm
             period="202312",
             comment_text="Before delete",
             author_id=author.id,
-            created_at=datetime.now(UTC),
-            updated_at=datetime.now(UTC),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
         db.session.add(comment)
         db.session.flush()
@@ -217,7 +237,7 @@ def test_delete_all_comments_removes_comments_and_edit_history(client, login_adm
                 editor_id=editor.id,
                 previous_text="Before",
                 new_text="After",
-                edited_at=datetime.now(UTC),
+                edited_at=datetime.now(timezone.utc),
             )
         )
         db.session.add(
@@ -235,7 +255,9 @@ def test_delete_all_comments_removes_comments_and_edit_history(client, login_adm
         assert CommentEdit.query.count() >= 1
         assert Contact.query.count() >= 1
 
-    response = client.post("/admin/system-config/delete-all-comments", follow_redirects=True)
+    response = client.post(
+        "/admin/system-config/delete-all-comments", follow_redirects=True
+    )
     assert response.status_code == 200
     assert b"All comments and contacts deleted." in response.data
 
@@ -265,8 +287,8 @@ def test_system_info_page_displays_comment_counts(client, login_admin, app):
                     period="202401",
                     comment_text="First",
                     author_id=author_one.id,
-                    created_at=datetime.now(UTC),
-                    updated_at=datetime.now(UTC),
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc),
                 ),
                 Comment(
                     ruref="12345678901",
@@ -274,8 +296,8 @@ def test_system_info_page_displays_comment_counts(client, login_admin, app):
                     period="202401",
                     comment_text="Second",
                     author_id=author_two.id,
-                    created_at=datetime.now(UTC),
-                    updated_at=datetime.now(UTC),
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc),
                 ),
                 Comment(
                     ruref="12345678902",
@@ -283,8 +305,8 @@ def test_system_info_page_displays_comment_counts(client, login_admin, app):
                     period="202312",
                     comment_text="Third",
                     author_id=author_two.id,
-                    created_at=datetime.now(UTC),
-                    updated_at=datetime.now(UTC),
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc),
                 ),
             ]
         )

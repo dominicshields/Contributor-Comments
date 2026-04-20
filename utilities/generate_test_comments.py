@@ -2,17 +2,19 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import random
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-import os
+from typing import Optional
 
 from faker import Faker
 from sqlalchemy import create_engine, text
 
-
-DEFAULT_DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/contributor_comments"
+DEFAULT_DATABASE_URL = (
+    "postgresql+psycopg://postgres:postgres@localhost:5432/contributor_comments"
+)
 DEFAULT_OUTPUT_FILENAME = "synthetic_test_comments.csv"
 ALLOWED_PERIODICITIES = {"Annual", "Quarterly", "Monthly", "Other"}
 CHEMICAL_ELEMENTS = [
@@ -93,7 +95,9 @@ def add_year(year: int, month: int) -> datetime:
     return datetime(year + 1, month, 1, 0, 0, 0)
 
 
-def month_allowed_for_periodicity(survey_code: str, periodicity: str, month: int) -> bool:
+def month_allowed_for_periodicity(
+    survey_code: str, periodicity: str, month: int
+) -> bool:
     if survey_code == "141":
         return month == 4
 
@@ -194,7 +198,9 @@ def attach_contact_details(records: list[dict[str, str]], fake: Faker) -> None:
         record["contact_email"] = fake.email()
 
 
-def generate_comments(comment_count: int, surveys: list[SurveyMetadata]) -> list[dict[str, str]]:
+def generate_comments(
+    comment_count: int, surveys: list[SurveyMetadata]
+) -> list[dict[str, str]]:
     if comment_count < 0:
         raise ValueError("comment_count must be zero or greater")
 
@@ -205,10 +211,12 @@ def generate_comments(comment_count: int, surveys: list[SurveyMetadata]) -> list
         for survey in surveys
     }
     ruref_states: dict[str, RurefState] = {}
-    general_periods = [f"{year}{month:02d}" for year in range(2020, 2026) for month in range(1, 13)]
+    general_periods = [
+        f"{year}{month:02d}" for year in range(2020, 2026) for month in range(1, 13)
+    ]
     new_ruref_count = 0
 
-    def choose_period(code: str, avoid_period: str | None = None) -> str | None:
+    def choose_period(code: str, avoid_period: Optional[str] = None) -> Optional[str]:
         valid_periods = period_map.get(code, [])
         if not valid_periods:
             return None
@@ -236,7 +244,9 @@ def generate_comments(comment_count: int, surveys: list[SurveyMetadata]) -> list
             )
 
         ruref_state = ruref_states[ruref]
-        emit_general_comment = ruref_state.should_emit_general and not ruref_state.emitted_general
+        emit_general_comment = (
+            ruref_state.should_emit_general and not ruref_state.emitted_general
+        )
 
         if emit_general_comment:
             survey_code = ""
@@ -250,7 +260,11 @@ def generate_comments(comment_count: int, surveys: list[SurveyMetadata]) -> list
                 if keep_same_survey:
                     survey_code = last_survey_code
                 else:
-                    candidate_codes = [survey.code for survey in surveys if survey.code != last_survey_code]
+                    candidate_codes = [
+                        survey.code
+                        for survey in surveys
+                        if survey.code != last_survey_code
+                    ]
                     if candidate_codes:
                         survey_code = random.choice(candidate_codes)
                     else:

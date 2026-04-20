@@ -67,10 +67,18 @@
             <thead>
                 <tr>
                     <th>Code</th>
-                    <th>Description</th>
-                    <th>Periodicity</th>
-                    <th class="forms-per-period-col">Forms Per Period</th>
-                    <th>Status</th>
+                    <th>
+                        <a href="{{ url_for('admin.surveys', sort='description') }}">Description{% if current_sort == 'description' %} (asc){% endif %}</a>
+                    </th>
+                    <th>
+                        <a href="{{ url_for('admin.surveys', sort='periodicity') }}">Periodicity{% if current_sort == 'periodicity' %} (asc){% endif %}</a>
+                    </th>
+                    <th class="forms-per-period-col">
+                        <a href="{{ url_for('admin.surveys', sort='forms_per_period') }}">Forms Per Period{% if current_sort == 'forms_per_period' %} (asc){% endif %}</a>
+                    </th>
+                    <th>
+                        <a href="{{ url_for('admin.surveys', sort='status') }}">Status{% if current_sort == 'status' %} (asc){% endif %}</a>
+                    </th>
                     {% if current_user.is_admin %}
                     <th>Actions</th>
                     {% endif %}

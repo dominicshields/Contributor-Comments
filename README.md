@@ -138,7 +138,10 @@ erDiagram
 	- Show all contacts
 	- Full contact details shown within each RUREF and ordered by survey (General first)
 	- Edit links for each contact
-- If a contact already exists for the same reporting unit and scope, users are redirected to edit the existing contact instead of creating another
+- Add Comment contact behavior:
+	- When RUREF and survey scope are entered, existing contact details for that scope are pre-filled automatically
+	- Users can amend those contact fields directly when saving a new comment
+	- If amended, the scoped contact is updated and the comment is saved in one step
 - Contact editing is available to all authenticated users
 - Admin survey metadata supports create, update, activate/deactivate, and complete delete (with confirmation)
 
@@ -147,6 +150,10 @@ erDiagram
 - Contact and author display labels are explicit in comment results:
 	- `Author: <name>`
 	- `Contact: Name, Telephone, Email`
+- Add Comment now auto-prefills contact details when an existing scoped contact is found.
+- `Check for Contact` has been removed from Add Comment because prefill is automatic.
+- If prefilled contact details are changed in Add Comment, save confirmation states: `Comment saved. Contact details amended.`
+- Comment views now use contact snapshots stored on each comment record so later contact edits do not rewrite historical comment contact details.
 - Contact blocks are controlled by `Show Contact Information`:
 	- `No`: no contact block is shown
 	- `Yes`: contact block is shown when contact name is present; telephone/email show `Not provided` when missing

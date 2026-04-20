@@ -65,7 +65,7 @@ def test_create_comment_accepts_period_matching_survey_periodicity(
     )
 
     assert response.status_code == 200
-    assert b"Comment saved." in response.data
+    assert b"Comment saved. Contact details amended." in response.data
 
 
 def test_create_and_search_comment_by_ruref(client, login_analyst, app):
@@ -185,7 +185,9 @@ def test_show_comments_testing_obeys_contact_visibility_toggle(client, login_ana
     assert b"pat@example.com" in response_visible.data
 
 
-def test_search_tab_displays_reporting_unit_and_comment_totals(client, login_analyst):
+def test_search_tab_does_not_display_reporting_unit_or_comment_totals(
+    client, login_analyst
+):
     client.post(
         "/comments/new",
         data={
@@ -220,8 +222,8 @@ def test_search_tab_displays_reporting_unit_and_comment_totals(client, login_ana
     response = client.get("/comments", follow_redirects=True)
 
     assert response.status_code == 200
-    assert b"Number of Reporting Units with comments: 2" in response.data
-    assert b"Total comments: 3" in response.data
+    assert b"Number of Reporting Units with comments:" not in response.data
+    assert b"Total comments:" not in response.data
 
 
 def test_comment_search_highlights_search_term_in_results(client, login_analyst):
@@ -414,7 +416,7 @@ def test_create_comment_with_contact_creates_contact_record(client, login_analys
         assert contact.email_address == "pat@example.com"
 
 
-def test_create_comment_rejects_duplicate_contact_for_same_scope(
+def test_create_comment_updates_existing_contact_for_same_scope(
     client, login_analyst, app
 ):
     client.post(
@@ -446,18 +448,26 @@ def test_create_comment_rejects_duplicate_contact_for_same_scope(
     )
 
     assert response.status_code == 200
-    assert (
-        b"A contact already exists for this reporting unit and survey 221."
-        in response.data
-    )
-    assert b"Edit Contact" in response.data
+    assert b"Comment saved." in response.data
 
     with app.app_context():
         contacts = Contact.query.filter_by(ruref="12345678901", survey_code="221").all()
+        comments = Comment.query.filter_by(ruref="12345678901", survey_code="221").all()
+        assert len(comments) == 2
         assert len(contacts) == 1
+        assert contacts[0].name == "Another Contact"
+        assert contacts[0].telephone_number == "0123456790"
+        assert contacts[0].email_address == "another@example.com"
+
+    detail_response = client.get(
+        "/ruref/12345678901?show_contacts=1", follow_redirects=True
+    )
+    assert detail_response.status_code == 200
+    assert b"Name: Pat Contact" in detail_response.data
+    assert b"Name: Another Contact" in detail_response.data
 
 
-def test_check_contact_redirects_to_existing_contact_edit(client, login_analyst):
+def test_check_contact_prefills_existing_contact_in_add_form(client, login_analyst):
     client.post(
         "/comments/new",
         data={
@@ -485,12 +495,85 @@ def test_check_contact_redirects_to_existing_contact_edit(client, login_analyst)
 
     assert response.status_code == 200
     assert (
-        b"A contact already exists for this reporting unit and survey 221."
+        b"An existing contact was found for this reporting unit and survey 221."
         in response.data
     )
-    assert b"Edit Contact" in response.data
-    assert b"Your draft comment has been preserved." in response.data
-    assert b'name="add_comment" value="Draft follow-up"' in response.data
+    assert b"Edit Contact" not in response.data
+    assert b'<textarea class="form-control" id="new-comment" name="comment"' in response.data
+    assert b"Draft follow-up" in response.data
+    assert b'name="contact_name" value="Pat Contact"' in response.data
+    assert b'name="contact_phone" value="0123456789"' in response.data
+    assert b'name="contact_email" value="pat@example.com"' in response.data
+
+
+def test_contact_prefill_endpoint_returns_existing_contact(client, login_analyst):
+    client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678901",
+            "survey": "221",
+            "period": "202601",
+            "comment": "First",
+            "contact_name": "Pat Contact",
+            "contact_phone": "0123456789",
+            "contact_email": "pat@example.com",
+        },
+        follow_redirects=True,
+    )
+
+    response = client.get(
+        "/comments/contact-prefill?ruref=12345678901&survey=221&is_general=0",
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload is not None
+    assert payload["found"] is True
+    assert payload["name"] == "Pat Contact"
+    assert payload["telephone_number"] == "0123456789"
+    assert payload["email_address"] == "pat@example.com"
+
+
+def test_create_comment_allows_matching_existing_contact_values(
+    client, login_analyst, app
+):
+    client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678901",
+            "survey": "221",
+            "period": "202601",
+            "comment": "First",
+            "contact_name": "Pat Contact",
+            "contact_phone": "0123456789",
+            "contact_email": "pat@example.com",
+        },
+        follow_redirects=True,
+    )
+
+    response = client.post(
+        "/comments/new",
+        data={
+            "ruref": "12345678901",
+            "survey": "221",
+            "period": "202602",
+            "comment": "Second",
+            "contact_name": "Pat Contact",
+            "contact_phone": "0123456789",
+            "contact_email": "pat@example.com",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Comment saved." in response.data
+
+    with app.app_context():
+        comments = Comment.query.filter_by(ruref="12345678901", survey_code="221").all()
+        contacts = Contact.query.filter_by(ruref="12345678901", survey_code="221").all()
+        assert len(comments) == 2
+        assert len(contacts) == 1
 
 
 def test_check_contact_returns_to_add_form_when_scope_has_no_contact(

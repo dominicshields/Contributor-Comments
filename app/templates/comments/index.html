@@ -29,10 +29,6 @@
 
 <div class="tab-content" id="commentsTabsContent">
     <div class="tab-pane fade {% if not add_tab_active %}show active{% endif %}" id="search-tab-pane" role="tabpanel" aria-labelledby="search-tab" tabindex="0">
-        <div class="small text-end mb-2">
-            <div>Number of Reporting Units with comments: {{ reporting_units_with_comments }}</div>
-            <div>Total comments: {{ total_comments }}</div>
-        </div>
         <div class="mb-4">
             <h2 class="ons-section-title">Search</h2>
             <form class="row g-3" method="get" action="{{ url_for('comments.index') }}">
@@ -121,8 +117,8 @@
                                 <p class="comment-body">{{ comment.comment_text }}</p>
                                 {% if show_contacts %}
                                 {% set scope_contacts = contacts_by_ruref.get(comment.ruref, {}) %}
-                                {% set contact = scope_contacts.get(contact_key_for_comment(comment)) %}
-                                {% if contact_has_display_name(contact) %}
+                                {% set contact = comment_contact_for_display(comment, scope_contacts) %}
+                                {% if contact %}
                                 <div class="comment-contact-compact">
                                     <strong>Contact:</strong>
                                     <span>Name: {{ contact.name }}</span>
@@ -174,8 +170,8 @@
                                     {{ comment.comment_text | highlight_term(q) }}
                                     {% if show_contacts %}
                                     {% set scope_contacts = contacts_by_ruref.get(comment.ruref, {}) %}
-                                    {% set contact = scope_contacts.get(contact_key_for_comment(comment)) %}
-                                    {% if contact_has_display_name(contact) %}
+                                    {% set contact = comment_contact_for_display(comment, scope_contacts) %}
+                                    {% if contact %}
                                     <div class="comment-contact-compact mt-1">
                                         <strong>Contact:</strong>
                                         <span>Name: {{ contact.name }}</span>
@@ -236,12 +232,11 @@
                         <label class="form-label" for="new-comment">Comment</label>
                         <textarea class="form-control" id="new-comment" name="comment" rows="4" required>{{ add_comment }}</textarea>
                     </div>
-                    <div class="col-12 d-flex justify-content-between align-items-end flex-wrap gap-2">
+                    <div class="col-12">
                         <div>
                             <h3 class="h6 mb-2">Contact (optional)</h3>
-                            <p class="text-muted small mb-0">Only enter contact details if no contact exists yet for this RUREF and survey.</p>
+                            <p class="text-muted small mb-0">If a contact already exists for this RUREF and survey, details are pre-filled. Any updates you make here will be saved with the comment.</p>
                         </div>
-                        <button class="btn btn-outline-secondary btn-sm" type="submit" formaction="{{ url_for('comments.check_contact') }}" formnovalidate>Check for Contact</button>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label" for="contact-name">Name</label>
@@ -294,6 +289,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const generalToggle = document.querySelector('[data-general-comment-toggle]');
     const surveyInputWrap = document.querySelector('[data-survey-input-wrap]');
     const surveySelect = document.getElementById('new-survey');
+    const addRurefInput = document.getElementById('new-ruref');
+    const contactNameInput = document.getElementById('contact-name');
+    const contactPhoneInput = document.getElementById('contact-phone');
+    const contactEmailInput = document.getElementById('contact-email');
+    const prefillUrl = '{{ url_for("comments.contact_prefill") }}';
 
     function syncGeneralToggleState() {
         if (!generalToggle || !surveyInputWrap || !surveySelect) {
@@ -314,6 +314,82 @@ document.addEventListener('DOMContentLoaded', function () {
         generalToggle.addEventListener('change', syncGeneralToggleState);
         syncGeneralToggleState();
     }
+
+    function canAttemptContactPrefill() {
+        if (!addRurefInput || !contactNameInput || !contactPhoneInput || !contactEmailInput) {
+            return false;
+        }
+
+        const ruref = addRurefInput.value.trim();
+        if (!/^\d{11}$/.test(ruref)) {
+            return false;
+        }
+
+        if (generalToggle && generalToggle.checked) {
+            return true;
+        }
+
+        return Boolean(surveySelect && surveySelect.value.trim());
+    }
+
+    function applyContactPrefill(data) {
+        if (!data || !data.found) {
+            return;
+        }
+
+        contactNameInput.value = data.name || '';
+        contactPhoneInput.value = data.telephone_number || '';
+        contactEmailInput.value = data.email_address || '';
+    }
+
+    let prefillRequestCounter = 0;
+    function requestContactPrefill() {
+        if (!canAttemptContactPrefill()) {
+            return;
+        }
+
+        const params = new URLSearchParams();
+        params.set('ruref', addRurefInput.value.trim());
+        params.set('is_general', generalToggle && generalToggle.checked ? '1' : '0');
+        if (surveySelect && surveySelect.value.trim()) {
+            params.set('survey', surveySelect.value.trim());
+        }
+
+        const requestId = ++prefillRequestCounter;
+        fetch(prefillUrl + '?' + params.toString(), {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    return null;
+                }
+                return response.json();
+            })
+            .then(function (data) {
+                if (requestId !== prefillRequestCounter) {
+                    return;
+                }
+                applyContactPrefill(data);
+            })
+            .catch(function () {
+                // Ignore failed prefill attempts to keep form entry uninterrupted.
+            });
+    }
+
+    if (addRurefInput) {
+        addRurefInput.addEventListener('blur', requestContactPrefill);
+    }
+    if (surveySelect) {
+        surveySelect.addEventListener('change', requestContactPrefill);
+    }
+    if (generalToggle) {
+        generalToggle.addEventListener('change', requestContactPrefill);
+    }
+
+    requestContactPrefill();
 
     if (!picker) {
         return;

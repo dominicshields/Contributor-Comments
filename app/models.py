@@ -108,6 +108,15 @@ class Comment(db.Model):
     is_general: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     period: Mapped[str] = mapped_column(String(6), nullable=False, index=True)
     comment_text: Mapped[str] = mapped_column(Text, nullable=False)
+    contact_name_snapshot: Mapped[str] = mapped_column(
+        String(120), nullable=False, default=""
+    )
+    contact_phone_snapshot: Mapped[str] = mapped_column(
+        String(50), nullable=False, default=""
+    )
+    contact_email_snapshot: Mapped[str] = mapped_column(
+        String(255), nullable=False, default=""
+    )
     author_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id"), nullable=False
     )

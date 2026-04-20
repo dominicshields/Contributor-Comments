@@ -94,15 +94,16 @@
             <article class="comment-card">
                 <p class="comment-period"><strong>{{ comment.period }}</strong></p>
                 <p class="comment-body">{{ comment.comment_text }}</p>
-                {% set contact_key = contact_key_for_comment(comment) %}
-                {% set contact = contacts_by_survey.get(contact_key) %}
-                {% if show_contacts and contact_has_display_name(contact) %}
+                {% set contact = comment_contact_for_display(comment, contacts_by_survey) %}
+                {% if show_contacts and contact %}
                 <div class="comment-contact-compact">
                     <strong>Contact:</strong>
                     <span>Name: {{ contact.name }}</span>
                     <span>Telephone: {{ contact.telephone_number or 'Not provided' }}</span>
                     <span>Email: {{ contact.email_address or 'Not provided' }}</span>
+                    {% if contact.id %}
                     <a href="{{ url_for('comments.edit_contact', contact_id=contact.id) }}">Edit contact</a>
+                    {% endif %}
                 </div>
                 {% endif %}
                 <p class="comment-meta">

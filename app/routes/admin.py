@@ -11,7 +11,7 @@ from typing import Optional
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
-from sqlalchemy import distinct
+from sqlalchemy import case, distinct
 
 from ..extensions import db
 from ..models import Comment, CommentEdit, Contact, ReportingUnit, Survey, User
@@ -165,8 +165,24 @@ def _database_size_display() -> str:
 @bp.get("/surveys")
 @login_required
 def surveys():
-    all_surveys = Survey.query.order_by(Survey.code.asc()).all()
-    return render_template("admin/surveys.html", surveys=all_surveys)
+    sort = request.args.get("sort", "").strip().lower()
+
+    sort_expressions = {
+        "description": db.func.lower(Survey.description).asc(),
+        "periodicity": Survey.periodicity.asc(),
+        "forms_per_period": Survey.forms_per_period.asc(),
+        "status": case((Survey.is_active.is_(True), "Active"), else_="Inactive").asc(),
+    }
+
+    query = Survey.query
+    if sort in sort_expressions:
+        query = query.order_by(sort_expressions[sort], Survey.code.asc())
+    else:
+        query = query.order_by(Survey.code.asc())
+        sort = ""
+
+    all_surveys = query.all()
+    return render_template("admin/surveys.html", surveys=all_surveys, current_sort=sort)
 
 
 @bp.post("/surveys")
@@ -482,12 +498,44 @@ def bulk_upload_comments_submit():
 
         author = _resolve_author(author_name, current_user)
 
+        contact_scope = survey_code if not is_general else None
+        existing_contact_for_scope = Contact.query.filter_by(
+            ruref=ruref, survey_code=contact_scope
+        ).first()
+
         comment = Comment(
             ruref=ruref,
             survey_code=survey_code if not is_general else None,
             is_general=is_general,
             period=period,
             comment_text=comment_text,
+            contact_name_snapshot=(
+                contact_name
+                if (contact_name or contact_phone or contact_email)
+                else (
+                    existing_contact_for_scope.name
+                    if existing_contact_for_scope is not None
+                    else ""
+                )
+            ),
+            contact_phone_snapshot=(
+                contact_phone
+                if (contact_name or contact_phone or contact_email)
+                else (
+                    existing_contact_for_scope.telephone_number
+                    if existing_contact_for_scope is not None
+                    else ""
+                )
+            ),
+            contact_email_snapshot=(
+                contact_email
+                if (contact_name or contact_phone or contact_email)
+                else (
+                    existing_contact_for_scope.email_address
+                    if existing_contact_for_scope is not None
+                    else ""
+                )
+            ),
             author_id=author.id,
         )
         if saved_at is not None:
@@ -497,10 +545,7 @@ def bulk_upload_comments_submit():
         db.session.add(comment)
 
         if contact_name or contact_phone or contact_email:
-            contact_scope = survey_code if not is_general else None
-            existing_contact = Contact.query.filter_by(
-                ruref=ruref, survey_code=contact_scope
-            ).first()
+            existing_contact = existing_contact_for_scope
 
             if existing_contact is None:
                 db.session.add(

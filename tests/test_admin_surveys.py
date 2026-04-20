@@ -16,6 +16,59 @@ def test_admin_surveys_page_displays_codes_in_ascending_order(client, login_admi
     assert index_002 < index_023 < index_138 < index_221 < index_241
 
 
+def test_admin_surveys_page_sorts_by_description_with_code_as_tie_breaker(
+    client, login_admin, app
+):
+    with app.app_context():
+        survey_777 = db.session.get(Survey, "777")
+        if survey_777 is None:
+            survey_777 = Survey(
+                code="777",
+                display_order=900,
+                description="Alpha",
+                periodicity="Monthly",
+                forms_per_period=1,
+                is_active=True,
+            )
+            db.session.add(survey_777)
+
+        survey_778 = db.session.get(Survey, "778")
+        if survey_778 is None:
+            survey_778 = Survey(
+                code="778",
+                display_order=901,
+                description="Alpha",
+                periodicity="Monthly",
+                forms_per_period=1,
+                is_active=True,
+            )
+            db.session.add(survey_778)
+
+        survey_779 = db.session.get(Survey, "779")
+        if survey_779 is None:
+            survey_779 = Survey(
+                code="779",
+                display_order=902,
+                description="Zulu",
+                periodicity="Monthly",
+                forms_per_period=1,
+                is_active=True,
+            )
+            db.session.add(survey_779)
+
+        db.session.commit()
+
+    response = client.get("/admin/surveys?sort=description", follow_redirects=True)
+    assert response.status_code == 200
+
+    page = response.data.decode("utf-8")
+    index_777 = page.find("<td>777</td>")
+    index_778 = page.find("<td>778</td>")
+    index_779 = page.find("<td>779</td>")
+
+    assert index_777 < index_778 < index_779
+
+
 def test_non_admin_can_view_survey_metadata_page(client, login_analyst):
     response = client.get("/admin/surveys", follow_redirects=True)
     assert response.status_code == 200

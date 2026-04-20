@@ -4,7 +4,7 @@ import calendar
 from collections import OrderedDict
 from typing import Optional
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import distinct, or_
 
@@ -122,6 +122,34 @@ def _contact_has_display_name(contact: Optional[Contact]) -> bool:
         return False
 
     return bool(contact.name.strip())
+
+
+def _comment_has_contact_snapshot(comment: Comment) -> bool:
+    return bool((comment.contact_name_snapshot or "").strip())
+
+
+def _comment_contact_for_display(
+    comment: Comment,
+    contacts_for_scope: dict[Optional[str], Contact],
+) -> Optional[dict[str, str]]:
+    if _comment_has_contact_snapshot(comment):
+        return {
+            "name": comment.contact_name_snapshot,
+            "telephone_number": comment.contact_phone_snapshot,
+            "email_address": comment.contact_email_snapshot,
+            "id": "",
+        }
+
+    contact = contacts_for_scope.get(_contact_key_for_comment(comment))
+    if contact is None or not _contact_has_display_name(contact):
+        return None
+
+    return {
+        "name": contact.name,
+        "telephone_number": contact.telephone_number,
+        "email_address": contact.email_address,
+        "id": str(contact.id),
+    }
 
 
 def _contacts_for_ruref(ruref: str) -> dict[Optional[str], Contact]:
@@ -302,8 +330,7 @@ def index():
         ruref_groups=ruref_groups,
         contacts_by_ruref=contacts_by_ruref,
         show_contacts=show_contacts,
-        contact_has_display_name=_contact_has_display_name,
-        contact_key_for_comment=_contact_key_for_comment,
+        comment_contact_for_display=_comment_contact_for_display,
         search_performed=search_performed,
         show_comments=show_comments,
         reporting_units_with_comments=_format_count_for_display(
@@ -586,24 +613,28 @@ def create_comment():
         valid = False
 
     has_contact_input = bool(contact_name or contact_phone or contact_email)
-    existing_contact = None
+    existing_contact_for_scope = Contact.query.filter_by(
+        ruref=ruref, survey_code=contact_survey_code
+    ).first()
+    create_new_contact = has_contact_input
+    contact_to_update: Optional[Contact] = None
     if has_contact_input:
-        existing_contact = Contact.query.filter_by(
-            ruref=ruref, survey_code=contact_survey_code
-        ).first()
+        existing_contact = existing_contact_for_scope
         if existing_contact is not None:
-            scope = (
-                "general comment"
-                if contact_survey_code is None
-                else f"survey {contact_survey_code}"
+            existing_name = (existing_contact.name or "").strip()
+            existing_phone = (existing_contact.telephone_number or "").strip()
+            existing_email = (existing_contact.email_address or "").strip()
+            input_matches_existing = (
+                contact_name == existing_name
+                and contact_phone == existing_phone
+                and contact_email == existing_email
             )
-            flash(
-                f"A contact already exists for this reporting unit and {scope}. Edit the existing contact instead.",
-                "error",
-            )
-            return redirect(
-                url_for("comments.edit_contact", contact_id=existing_contact.id)
-            )
+
+            if input_matches_existing:
+                create_new_contact = False
+            else:
+                create_new_contact = False
+                contact_to_update = existing_contact
 
     if not valid:
         return redirect(url_for("comments.index", ruref=ruref))
@@ -619,11 +650,36 @@ def create_comment():
         is_general=is_general,
         period=period,
         comment_text=comment_text,
+        contact_name_snapshot=(
+            contact_name
+            if has_contact_input
+            else (existing_contact_for_scope.name if existing_contact_for_scope else "")
+        ),
+        contact_phone_snapshot=(
+            contact_phone
+            if has_contact_input
+            else (
+                existing_contact_for_scope.telephone_number
+                if existing_contact_for_scope
+                else ""
+            )
+        ),
+        contact_email_snapshot=(
+            contact_email
+            if has_contact_input
+            else (
+                existing_contact_for_scope.email_address
+                if existing_contact_for_scope
+                else ""
+            )
+        ),
         author_id=current_user.id,
     )
     db.session.add(comment)
 
-    if has_contact_input and existing_contact is None:
+    contact_was_amended = contact_to_update is not None
+
+    if create_new_contact:
         db.session.add(
             Contact(
                 ruref=ruref,
@@ -633,10 +689,17 @@ def create_comment():
                 email_address=contact_email,
             )
         )
+    elif contact_to_update is not None:
+        contact_to_update.name = contact_name
+        contact_to_update.telephone_number = contact_phone
+        contact_to_update.email_address = contact_email
 
     db.session.commit()
 
-    flash("Comment saved.", "success")
+    if contact_was_amended:
+        flash("Comment saved. Contact details amended.", "success")
+    else:
+        flash("Comment saved.", "success")
     return redirect(url_for("comments.ruref_detail", ruref=ruref))
 
 
@@ -671,17 +734,16 @@ def check_contact():
             if contact_survey_code is None
             else f"survey {contact_survey_code}"
         )
+        redirect_params["add_contact_name"] = existing_contact.name or ""
+        redirect_params["add_contact_phone"] = (
+            existing_contact.telephone_number or ""
+        )
+        redirect_params["add_contact_email"] = existing_contact.email_address or ""
         flash(
-            f"A contact already exists for this reporting unit and {scope}. Edit the existing contact instead.",
+            f"An existing contact was found for this reporting unit and {scope}. Contact fields have been pre-filled.",
             "info",
         )
-        return redirect(
-            url_for(
-                "comments.edit_contact",
-                contact_id=existing_contact.id,
-                **redirect_params,
-            )
-        )
+        return redirect(url_for("comments.index", **redirect_params))
 
     scope = (
         "general comment"
@@ -690,6 +752,39 @@ def check_contact():
     )
     flash(f"No existing contact was found for this reporting unit and {scope}.", "info")
     return redirect(url_for("comments.index", **redirect_params))
+
+
+@bp.get("/comments/contact-prefill")
+@login_required
+def contact_prefill():
+    ruref = request.args.get("ruref", "").strip()
+    survey_code = request.args.get("survey", "").strip()
+    is_general = request.args.get("is_general") == "1"
+
+    if not is_valid_ruref(ruref):
+        return jsonify({"found": False})
+
+    contact_survey_code: Optional[str] = None
+    if not is_general:
+        survey = db.session.get(Survey, survey_code)
+        if survey is None or not survey.is_active:
+            return jsonify({"found": False})
+        contact_survey_code = survey_code
+
+    existing_contact = Contact.query.filter_by(
+        ruref=ruref, survey_code=contact_survey_code
+    ).first()
+    if existing_contact is None:
+        return jsonify({"found": False})
+
+    return jsonify(
+        {
+            "found": True,
+            "name": existing_contact.name or "",
+            "telephone_number": existing_contact.telephone_number or "",
+            "email_address": existing_contact.email_address or "",
+        }
+    )
 
 
 @bp.get("/ruref/<ruref>")
@@ -732,8 +827,7 @@ def ruref_detail(ruref: str):
         grouped_comments=grouped_comments,
         contacts_by_survey=contacts_by_survey,
         show_contacts=show_contacts,
-        contact_has_display_name=_contact_has_display_name,
-        contact_key_for_comment=_contact_key_for_comment,
+        comment_contact_for_display=_comment_contact_for_display,
         surveys=surveys,
         selected_surveys=selected_surveys,
         q=query_text,

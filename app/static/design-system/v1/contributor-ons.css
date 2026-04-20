@@ -222,29 +222,44 @@ a:focus {
     border-bottom-color: var(--ons-turquoise);
 }
 
-.ons-primary-nav .dropdown-menu {
+.ons-secondary-nav {
     background: var(--ons-info-tint);
-    border: 1px solid var(--ons-grey-15);
-    border-radius: 0;
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
-    margin-top: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    border-bottom: 1px solid var(--ons-grey-15);
 }
 
-.ons-primary-nav .dropdown-item {
-    color: var(--ons-black);
-    font-weight: 600;
+.ons-secondary-nav__list {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin: 0;
+    padding: 0;
 }
 
-.ons-primary-nav .dropdown-item:hover,
-.ons-primary-nav .dropdown-item:focus {
-    background: var(--ons-grey-95);
-    color: var(--ons-link-hover);
+.ons-secondary-nav__list li {
+    margin: 0;
 }
 
-.ons-primary-nav .dropdown-item.active,
-.ons-primary-nav .dropdown-item:active {
+.ons-secondary-nav__link {
+    display: block;
+    color: var(--ons-blue);
+    font-weight: 700;
+    text-decoration: none;
+    padding: 0.8rem 1rem;
+    border-bottom: 4px solid transparent;
+}
+
+.ons-secondary-nav__link:hover,
+.ons-secondary-nav__link:focus {
+    color: var(--ons-blue);
     background: #dbe7f1;
-    color: var(--ons-black);
+    text-decoration: underline;
+}
+
+.ons-secondary-nav__link.is-active {
+    border-bottom-color: var(--ons-blue-alt);
+    background: #dbe7f1;
 }
 
 .ons-site-footer {
@@ -273,15 +288,35 @@ a:focus {
 }
 
 .ons-page-header {
-    margin-bottom: 1.25rem;
+    max-width: 48rem;
+    margin-bottom: 2rem;
+    padding-bottom: 0.5rem;
 }
 
 .ons-page-title {
     color: var(--ons-black);
+    font-size: 2rem;
+    line-height: 1.15;
+    font-weight: 700;
+    margin: 0 0 0.75rem;
 }
 
 .ons-page-lead {
     color: var(--ons-grey-75);
+    font-size: 1.125rem;
+    line-height: 1.55;
+    margin: 0;
+    max-width: 42rem;
+}
+
+@media (min-width: 62rem) {
+    .ons-page-header {
+        margin-bottom: 2.5rem;
+    }
+
+    .ons-page-title {
+        font-size: 2.25rem;
+    }
 }
 
 .ons-panel {
@@ -522,6 +557,15 @@ a:focus {
     }
 
     .ons-primary-nav__link {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .ons-secondary-nav__list {
+        flex-direction: column;
+    }
+
+    .ons-secondary-nav__link {
         padding-left: 0;
         padding-right: 0;
     }

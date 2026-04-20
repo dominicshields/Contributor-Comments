@@ -21,6 +21,8 @@
 </div>
 
 <header class="ons-site-shell" role="banner">
+    {% set comments_section_active = request.endpoint in ['comments.comments_by_author', 'comments.comments_by_date'] %}
+    {% set system_config_active = request.endpoint in ['admin.system_info', 'admin.bulk_upload_comments', 'admin.bulk_upload_comments_submit', 'admin.delete_all_comments_page', 'admin.delete_all_comments_submit'] %}
     <div class="ons-site-shell__masthead">
         <div class="ons-shell-width ons-site-shell__masthead-inner">
             <div class="ons-brand-block">
@@ -49,12 +51,8 @@
                     <li class="nav-item">
                         <a class="nav-link ons-primary-nav__link {% if request.endpoint == 'comments.index' %}is-active{% endif %}" href="{{ url_for('comments.index') }}">Search and Add</a>
                     </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle ons-primary-nav__link {% if request.endpoint in ['comments.comments_by_author', 'comments.comments_by_date'] %}is-active{% endif %}" href="#" id="commentsMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">Comments</a>
-                        <ul class="dropdown-menu" aria-labelledby="commentsMenu">
-                            <li><a class="dropdown-item {% if request.endpoint == 'comments.comments_by_author' %}active{% endif %}" href="{{ url_for('comments.comments_by_author') }}">Comments by Author</a></li>
-                            <li><a class="dropdown-item {% if request.endpoint == 'comments.comments_by_date' %}active{% endif %}" href="{{ url_for('comments.comments_by_date') }}">Comments by Date</a></li>
-                        </ul>
+                    <li class="nav-item">
+                        <a class="nav-link ons-primary-nav__link {% if comments_section_active %}is-active{% endif %}" href="{{ url_for('comments.comments_by_author') }}">Comments</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link ons-primary-nav__link {% if request.endpoint == 'comments.contact_management' %}is-active{% endif %}" href="{{ url_for('comments.contact_management') }}">Contact Management</a>
@@ -63,13 +61,8 @@
                         <a class="nav-link ons-primary-nav__link {% if request.blueprint == 'admin' and request.endpoint in ['admin.surveys', 'admin.add_survey', 'admin.update_survey_metadata', 'admin.toggle_survey_active', 'admin.delete_survey', 'admin.import_surveys'] %}is-active{% endif %}" href="{{ url_for('admin.surveys') }}">Survey Metadata</a>
                     </li>
                     {% if current_user.is_admin %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle ons-primary-nav__link {% if request.endpoint in ['admin.system_info', 'admin.bulk_upload_comments', 'admin.bulk_upload_comments_submit', 'admin.delete_all_comments_page', 'admin.delete_all_comments_submit'] %}is-active{% endif %}" href="#" id="systemConfigMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">System Config</a>
-                        <ul class="dropdown-menu" aria-labelledby="systemConfigMenu">
-                            <li><a class="dropdown-item {% if request.endpoint == 'admin.system_info' %}active{% endif %}" href="{{ url_for('admin.system_info') }}">System Info</a></li>
-                            <li><a class="dropdown-item {% if request.endpoint in ['admin.bulk_upload_comments', 'admin.bulk_upload_comments_submit'] %}active{% endif %}" href="{{ url_for('admin.bulk_upload_comments') }}">Bulk Upload Comments</a></li>
-                            <li><a class="dropdown-item {% if request.endpoint in ['admin.delete_all_comments_page', 'admin.delete_all_comments_submit'] %}active{% endif %}" href="{{ url_for('admin.delete_all_comments_page') }}">Delete all comments and contacts</a></li>
-                        </ul>
+                    <li class="nav-item">
+                        <a class="nav-link ons-primary-nav__link {% if system_config_active %}is-active{% endif %}" href="{{ url_for('admin.system_info') }}">System Config</a>
                     </li>
                     {% endif %}
                     <li class="nav-item">
@@ -79,6 +72,27 @@
             </div>
         </div>
     </nav>
+
+    {% if comments_section_active %}
+    <nav class="ons-secondary-nav" aria-label="Comments submenu">
+        <div class="ons-shell-width">
+            <ul class="ons-secondary-nav__list">
+                <li><a class="ons-secondary-nav__link {% if request.endpoint == 'comments.comments_by_author' %}is-active{% endif %}" href="{{ url_for('comments.comments_by_author') }}">Comments by Author</a></li>
+                <li><a class="ons-secondary-nav__link {% if request.endpoint == 'comments.comments_by_date' %}is-active{% endif %}" href="{{ url_for('comments.comments_by_date') }}">Comments by Date</a></li>
+            </ul>
+        </div>
+    </nav>
+    {% elif current_user.is_admin and system_config_active %}
+    <nav class="ons-secondary-nav" aria-label="System Config submenu">
+        <div class="ons-shell-width">
+            <ul class="ons-secondary-nav__list">
+                <li><a class="ons-secondary-nav__link {% if request.endpoint == 'admin.system_info' %}is-active{% endif %}" href="{{ url_for('admin.system_info') }}">System Info</a></li>
+                <li><a class="ons-secondary-nav__link {% if request.endpoint in ['admin.bulk_upload_comments', 'admin.bulk_upload_comments_submit'] %}is-active{% endif %}" href="{{ url_for('admin.bulk_upload_comments') }}">Bulk Upload Comments</a></li>
+                <li><a class="ons-secondary-nav__link {% if request.endpoint in ['admin.delete_all_comments_page', 'admin.delete_all_comments_submit'] %}is-active{% endif %}" href="{{ url_for('admin.delete_all_comments_page') }}">Delete all comments and contacts</a></li>
+            </ul>
+        </div>
+    </nav>
+    {% endif %}
     {% endif %}
 </header>
 

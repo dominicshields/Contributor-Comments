@@ -225,3 +225,23 @@ class SiteContent(db.Model):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
+
+class CommentTemplate(db.Model):
+    __tablename__ = "comment_templates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    wording: Mapped[str] = mapped_column(Text, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )

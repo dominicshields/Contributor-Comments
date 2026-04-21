@@ -9,7 +9,7 @@ from flask_login import current_user, login_required
 from sqlalchemy import distinct, or_
 
 from ..extensions import db
-from ..models import Comment, CommentEdit, Contact, ReportingUnit, SiteContent, Survey, User
+from ..models import Comment, CommentEdit, CommentTemplate, Contact, ReportingUnit, SiteContent, Survey, User
 from ..validation import is_period_allowed_for_survey, is_valid_period, is_valid_ruref
 
 bp = Blueprint("comments", __name__)
@@ -334,6 +334,11 @@ def index():
         .order_by(Survey.display_order.asc())
         .all()
     )
+    templates = (
+        CommentTemplate.query.filter_by(is_active=True)
+        .order_by(CommentTemplate.display_order.asc(), CommentTemplate.id.asc())
+        .all()
+    )
     comments = []
     grouped_results = OrderedDict()
     ruref_groups = OrderedDict()
@@ -420,6 +425,7 @@ def index():
         add_contact_name=add_contact_name,
         add_contact_phone=add_contact_phone,
         add_contact_email=add_contact_email,
+        comment_templates=templates,
         comment_spellcheck_enabled=current_user.comment_spellcheck_enabled,
     )
 

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Available Templates | Contributor Comments{% endblock %}
+
+{% block content %}
+<header class="ons-page-header">
+    <h1 class="ons-page-title">Available Templates</h1>
+    <p class="ons-page-lead">Manage standard wording options shown in Add Comment.</p>
+</header>
+
+<div class="mb-4">
+    <h2 class="ons-section-title">Add Template</h2>
+    <form class="row g-3" method="post" action="{{ url_for('admin.add_template') }}">
+        <div class="col-12">
+            <label class="form-label" for="new-template-wording">Template Wording</label>
+            <textarea
+                class="form-control"
+                id="new-template-wording"
+                name="wording"
+                rows="2"
+                required
+            ></textarea>
+        </div>
+        <div class="col-12">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="new-template-active" name="is_active" value="1" checked>
+                <label class="form-check-label" for="new-template-active">Active</label>
+            </div>
+        </div>
+        <div class="col-12">
+            <button class="btn btn-primary" type="submit">Add Template</button>
+        </div>
+    </form>
+</div>
+
+<div class="ons-content-section">
+    <h2 class="ons-section-title">Current Templates</h2>
+    {% if templates %}
+    <div class="d-flex flex-column gap-3">
+        {% for template in templates %}
+        <form method="post" action="{{ url_for('admin.update_template', template_id=template.id) }}" class="card card-body">
+            <div class="mb-2">
+                <label class="form-label" for="template-wording-{{ template.id }}">Template {{ template.id }}</label>
+                <textarea
+                    class="form-control"
+                    id="template-wording-{{ template.id }}"
+                    name="wording"
+                    rows="2"
+                    required
+                >{{ template.wording }}</textarea>
+            </div>
+            <div class="form-check mb-3">
+                <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="template-active-{{ template.id }}"
+                    name="is_active"
+                    value="1"
+                    {% if template.is_active %}checked{% endif %}
+                >
+                <label class="form-check-label" for="template-active-{{ template.id }}">Active</label>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <button
+                    class="btn btn-outline-secondary btn-sm"
+                    type="submit"
+                    formaction="{{ url_for('admin.move_template', template_id=template.id) }}"
+                    name="direction"
+                    value="up"
+                >
+                    Move Up
+                </button>
+                <button
+                    class="btn btn-outline-secondary btn-sm"
+                    type="submit"
+                    formaction="{{ url_for('admin.move_template', template_id=template.id) }}"
+                    name="direction"
+                    value="down"
+                >
+                    Move Down
+                </button>
+                <button class="btn btn-outline-primary" type="submit">Save</button>
+            </div>
+        </form>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="mb-0">No templates configured.</p>
+    {% endif %}
+</div>
+{% endblock %}

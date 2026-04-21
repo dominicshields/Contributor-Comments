@@ -233,6 +233,18 @@
                     </div>
                     <div class="col-12">
                         <label class="form-label" for="new-comment">Comment</label>
+                        {% if comment_templates %}
+                        <div class="mb-2">
+                            <button
+                                class="btn btn-outline-secondary btn-sm"
+                                type="button"
+                                data-bs-toggle="modal"
+                                data-bs-target="#comment-template-modal"
+                            >
+                                Insert from template
+                            </button>
+                        </div>
+                        {% endif %}
                         <div class="form-check mb-2">
                             <input
                                 class="form-check-input"
@@ -271,6 +283,45 @@
                 </div>
             </form>
         </div>
+{% endif %}
+
+{% if add_tab_active and comment_templates %}
+<div class="modal fade" id="comment-template-modal" tabindex="-1" aria-labelledby="comment-template-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="comment-template-modal-label">Available Templates</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" for="template-filter">Filter templates</label>
+                    <input
+                        class="form-control"
+                        type="text"
+                        id="template-filter"
+                        placeholder="Type to filter template wording"
+                        data-template-filter
+                    >
+                </div>
+                <div class="list-group">
+                    {% for template in comment_templates %}
+                    <button
+                        type="button"
+                        class="list-group-item list-group-item-action d-flex justify-content-between align-items-start"
+                        data-template-insert
+                        data-template-text="{{ template.wording }}"
+                        data-template-item
+                    >
+                        <span class="me-3">{{ template.wording }}</span>
+                        <span class="badge text-bg-secondary">Use</span>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endif %}
 
 {% endblock %}
@@ -312,6 +363,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const prefillUrl = '{{ url_for("comments.contact_prefill") }}';
     const spellcheckPreferenceUrl = '{{ url_for("comments.update_comment_spellcheck_preference") }}';
     const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+    const templateModalEl = document.getElementById('comment-template-modal');
+    const templateFilterInput = document.querySelector('[data-template-filter]');
 
     function applyCommentSpellcheck(enabled) {
         if (!commentTextarea) {
@@ -462,6 +515,47 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     requestContactPrefill();
+
+    document.querySelectorAll('[data-template-insert]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            if (!commentTextarea) {
+                return;
+            }
+
+            const templateText = (button.getAttribute('data-template-text') || '').trim();
+            if (!templateText) {
+                return;
+            }
+
+            const existing = commentTextarea.value || '';
+            if (!existing.trim()) {
+                commentTextarea.value = templateText;
+            } else {
+                const separator = existing.endsWith('\n') ? '' : '\n';
+                commentTextarea.value = existing + separator + templateText;
+            }
+
+            commentTextarea.focus();
+            commentTextarea.selectionStart = commentTextarea.value.length;
+            commentTextarea.selectionEnd = commentTextarea.value.length;
+
+            if (templateModalEl) {
+                const modal = bootstrap.Modal.getOrCreateInstance(templateModalEl);
+                modal.hide();
+            }
+        });
+    });
+
+    if (templateFilterInput) {
+        const templateItems = Array.from(document.querySelectorAll('[data-template-item]'));
+        templateFilterInput.addEventListener('input', function () {
+            const query = templateFilterInput.value.trim().toLowerCase();
+            templateItems.forEach(function (item) {
+                const wording = (item.getAttribute('data-template-text') || '').toLowerCase();
+                item.style.display = wording.includes(query) ? '' : 'none';
+            });
+        });
+    }
 
     if (!picker) {
         return;

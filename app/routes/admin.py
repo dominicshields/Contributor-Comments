@@ -14,7 +14,7 @@ from flask_login import current_user, login_required
 from sqlalchemy import case, distinct
 
 from ..extensions import db
-from ..models import Comment, CommentEdit, Contact, ReportingUnit, Survey, User
+from ..models import Comment, CommentEdit, CommentTemplate, Contact, ReportingUnit, Survey, User
 from ..validation import (
     ALLOWED_SURVEY_PERIODICITIES,
     is_valid_period,
@@ -160,6 +160,10 @@ def _database_size_display() -> str:
         return "Database file not found"
 
     return f"Unavailable for {backend_name}"
+
+
+def _normalize_template_wording(value: str) -> str:
+    return " ".join(value.split())
 
 
 @bp.get("/surveys")
@@ -643,6 +647,112 @@ def system_info():
         total_contacts=total_contacts,
         contacts_by_scope=contacts_by_scope,
     )
+
+
+@bp.get("/system-config/templates")
+@login_required
+def templates_page():
+    if not _ensure_admin():
+        return redirect(url_for("comments.index"))
+
+    templates = CommentTemplate.query.order_by(
+        CommentTemplate.display_order.asc(), CommentTemplate.id.asc()
+    ).all()
+    return render_template("admin/templates.html", templates=templates)
+
+
+@bp.post("/system-config/templates")
+@login_required
+def add_template():
+    if not _ensure_admin():
+        return redirect(url_for("comments.index"))
+
+    wording = _normalize_template_wording(request.form.get("wording", ""))
+    is_active = request.form.get("is_active") == "1"
+
+    if not wording:
+        flash("Template wording is required.", "error")
+        return redirect(url_for("admin.templates_page"))
+
+    max_order = db.session.query(db.func.max(CommentTemplate.display_order)).scalar() or 0
+    db.session.add(
+        CommentTemplate(
+            wording=wording,
+            is_active=is_active,
+            display_order=max_order + 1,
+        )
+    )
+    db.session.commit()
+    flash("Template added.", "success")
+    return redirect(url_for("admin.templates_page"))
+
+
+@bp.post("/system-config/templates/<int:template_id>")
+@login_required
+def update_template(template_id: int):
+    if not _ensure_admin():
+        return redirect(url_for("comments.index"))
+
+    template = db.session.get(CommentTemplate, template_id)
+    if template is None:
+        flash("Template not found.", "error")
+        return redirect(url_for("admin.templates_page"))
+
+    wording = _normalize_template_wording(request.form.get("wording", ""))
+    if not wording:
+        flash("Template wording is required.", "error")
+        return redirect(url_for("admin.templates_page"))
+
+    template.wording = wording
+    template.is_active = request.form.get("is_active") == "1"
+    db.session.commit()
+    flash("Template updated.", "success")
+    return redirect(url_for("admin.templates_page"))
+
+
+@bp.post("/system-config/templates/<int:template_id>/move")
+@login_required
+def move_template(template_id: int):
+    if not _ensure_admin():
+        return redirect(url_for("comments.index"))
+
+    direction = request.form.get("direction", "").strip().lower()
+    if direction not in {"up", "down"}:
+        flash("Invalid move direction.", "error")
+        return redirect(url_for("admin.templates_page"))
+
+    template = db.session.get(CommentTemplate, template_id)
+    if template is None:
+        flash("Template not found.", "error")
+        return redirect(url_for("admin.templates_page"))
+
+    if direction == "up":
+        neighbor = (
+            CommentTemplate.query.filter(
+                CommentTemplate.display_order < template.display_order
+            )
+            .order_by(CommentTemplate.display_order.desc(), CommentTemplate.id.desc())
+            .first()
+        )
+    else:
+        neighbor = (
+            CommentTemplate.query.filter(
+                CommentTemplate.display_order > template.display_order
+            )
+            .order_by(CommentTemplate.display_order.asc(), CommentTemplate.id.asc())
+            .first()
+        )
+
+    if neighbor is None:
+        return redirect(url_for("admin.templates_page"))
+
+    template.display_order, neighbor.display_order = (
+        neighbor.display_order,
+        template.display_order,
+    )
+    db.session.commit()
+
+    return redirect(url_for("admin.templates_page"))
 
 
 @bp.get("/system-config/delete-all-comments")

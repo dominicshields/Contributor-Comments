@@ -262,6 +262,50 @@ def test_comment_search_can_match_author(client, login_analyst):
     assert b"Author searchable comment." in response.data
 
 
+def test_add_comment_spellcheck_is_disabled_by_default(client, login_analyst):
+    response = client.get("/comments?tab=add", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b'id="comment-spellcheck-enabled"' in response.data
+    assert b'spellcheck="false"' in response.data
+
+
+def test_add_comment_spellcheck_preference_persists_per_user(
+    client, login_analyst, app
+):
+    response = client.post(
+        "/comments/preferences/spellcheck",
+        data={"enabled": "1"},
+    )
+
+    assert response.status_code == 200
+    assert response.json == {"saved": True, "enabled": True}
+
+    with app.app_context():
+        analyst = User.query.filter_by(username="analyst1").first()
+        assert analyst is not None
+        assert analyst.comment_spellcheck_enabled is True
+
+    updated_page = client.get("/comments?tab=add", follow_redirects=True)
+    assert updated_page.status_code == 200
+    assert b'id="comment-spellcheck-enabled"' in updated_page.data
+    assert b"checked" in updated_page.data
+    assert b'spellcheck="true"' in updated_page.data
+
+    disable_response = client.post(
+        "/comments/preferences/spellcheck",
+        data={"enabled": "0"},
+    )
+
+    assert disable_response.status_code == 200
+    assert disable_response.json == {"saved": True, "enabled": False}
+
+    with app.app_context():
+        analyst = User.query.filter_by(username="analyst1").first()
+        assert analyst is not None
+        assert analyst.comment_spellcheck_enabled is False
+
+
 def test_search_results_show_contact_info_only_when_toggled_on(client, login_analyst):
     client.post(
         "/comments/new",

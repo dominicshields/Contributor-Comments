@@ -233,7 +233,19 @@
                     </div>
                     <div class="col-12">
                         <label class="form-label" for="new-comment">Comment</label>
-                        <textarea class="form-control" id="new-comment" name="comment" rows="4" required>{{ add_comment }}</textarea>
+                        <div class="form-check mb-2">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                id="comment-spellcheck-enabled"
+                                {% if comment_spellcheck_enabled %}checked{% endif %}
+                                data-comment-spellcheck-toggle
+                            >
+                            <label class="form-check-label" for="comment-spellcheck-enabled">
+                                Enable spell check for comment text
+                            </label>
+                        </div>
+                        <textarea class="form-control" id="new-comment" name="comment" rows="4" spellcheck="{{ 'true' if comment_spellcheck_enabled else 'false' }}" required>{{ add_comment }}</textarea>
                     </div>
                     <div class="col-12">
                         <div>
@@ -295,7 +307,65 @@ document.addEventListener('DOMContentLoaded', function () {
     const contactNameInput = document.getElementById('contact-name');
     const contactPhoneInput = document.getElementById('contact-phone');
     const contactEmailInput = document.getElementById('contact-email');
+    const commentTextarea = document.getElementById('new-comment');
+    const commentSpellcheckToggle = document.querySelector('[data-comment-spellcheck-toggle]');
     const prefillUrl = '{{ url_for("comments.contact_prefill") }}';
+    const spellcheckPreferenceUrl = '{{ url_for("comments.update_comment_spellcheck_preference") }}';
+    const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+
+    function applyCommentSpellcheck(enabled) {
+        if (!commentTextarea) {
+            return;
+        }
+
+        commentTextarea.spellcheck = enabled;
+        commentTextarea.setAttribute('spellcheck', enabled ? 'true' : 'false');
+    }
+
+    applyCommentSpellcheck({{ 'true' if comment_spellcheck_enabled else 'false' }});
+
+    if (commentSpellcheckToggle) {
+        commentSpellcheckToggle.addEventListener('change', function () {
+            const enabled = commentSpellcheckToggle.checked;
+            applyCommentSpellcheck(enabled);
+
+            const body = new URLSearchParams();
+            body.set('enabled', enabled ? '1' : '0');
+
+            const headers = {
+                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                'Accept': 'application/json'
+            };
+
+            if (csrfTokenMeta && csrfTokenMeta.content) {
+                headers['X-CSRFToken'] = csrfTokenMeta.content;
+            }
+
+            fetch(spellcheckPreferenceUrl, {
+                method: 'POST',
+                headers: headers,
+                body: body.toString()
+            })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('Failed to save spellcheck preference');
+                    }
+                    return response.json();
+                })
+                .then(function (data) {
+                    if (!data || !data.saved) {
+                        throw new Error('Failed to save spellcheck preference');
+                    }
+
+                    applyCommentSpellcheck(Boolean(data.enabled));
+                    commentSpellcheckToggle.checked = Boolean(data.enabled);
+                })
+                .catch(function () {
+                    commentSpellcheckToggle.checked = !enabled;
+                    applyCommentSpellcheck(!enabled);
+                });
+        });
+    }
 
     function syncGeneralToggleState() {
         if (!generalToggle || !surveyInputWrap || !surveySelect) {

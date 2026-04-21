@@ -25,6 +25,14 @@ def _query_flag(name: str, default: bool = False) -> bool:
     return raw in {"1", "true", "yes", "on", "y"}
 
 
+def _form_flag(name: str, default: bool = False) -> bool:
+    raw = request.form.get(name)
+    if raw is None:
+        return default
+
+    return raw.strip().lower() in {"1", "true", "yes", "on", "y"}
+
+
 def _add_comment_form_state(source) -> dict[str, str]:
     is_general = source.get("is_general") == "1"
     return {
@@ -350,6 +358,7 @@ def index():
         add_contact_name=add_contact_name,
         add_contact_phone=add_contact_phone,
         add_contact_email=add_contact_email,
+        comment_spellcheck_enabled=current_user.comment_spellcheck_enabled,
     )
 
 
@@ -735,9 +744,7 @@ def check_contact():
             else f"survey {contact_survey_code}"
         )
         redirect_params["add_contact_name"] = existing_contact.name or ""
-        redirect_params["add_contact_phone"] = (
-            existing_contact.telephone_number or ""
-        )
+        redirect_params["add_contact_phone"] = existing_contact.telephone_number or ""
         redirect_params["add_contact_email"] = existing_contact.email_address or ""
         flash(
             f"An existing contact was found for this reporting unit and {scope}. Contact fields have been pre-filled.",
@@ -783,6 +790,19 @@ def contact_prefill():
             "name": existing_contact.name or "",
             "telephone_number": existing_contact.telephone_number or "",
             "email_address": existing_contact.email_address or "",
+        }
+    )
+
+
+@bp.post("/comments/preferences/spellcheck")
+@login_required
+def update_comment_spellcheck_preference():
+    current_user.comment_spellcheck_enabled = _form_flag("enabled", default=False)
+    db.session.commit()
+    return jsonify(
+        {
+            "saved": True,
+            "enabled": current_user.comment_spellcheck_enabled,
         }
     )
 

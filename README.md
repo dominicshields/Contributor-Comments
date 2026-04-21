@@ -21,7 +21,9 @@ Contributor Comments is a Flask + Jinja application for capturing and searching 
 	- `code` (3 chars, PK)
 	- `display_order`
 	- `description` (text description of survey)
+	- `periodicity`
 	- `forms_per_period` (numeric count)
+	- `is_active`
 - `comments`
 	- `id` (PK)
 	- `ruref` (FK to reporting_units)
@@ -29,8 +31,12 @@ Contributor Comments is a Flask + Jinja application for capturing and searching 
 	- `is_general` (bool flag for comments not tied to one survey)
 	- `period` (YYYYMM)
 	- `comment_text`
+	- `contact_name_snapshot`
+	- `contact_phone_snapshot`
+	- `contact_email_snapshot`
 	- `author_id` (FK to users)
 	- `created_at` (UTC)
+	- `updated_at` (UTC)
 - `contacts`
 	- `id` (PK)
 	- `ruref` (FK to reporting_units)
@@ -38,10 +44,13 @@ Contributor Comments is a Flask + Jinja application for capturing and searching 
 	- `name`
 	- `telephone_number`
 	- `email_address`
+	- `created_at` (UTC)
+	- `updated_at` (UTC)
 - `comment_edits`
 	- Tracks editor, edit timestamp, previous text, and new text
 - `users`
 	- App login users (author/editor identity source)
+	- Includes per-user UI preferences such as add-comment spellcheck
 
 ## ER Diagram
 
@@ -53,6 +62,7 @@ erDiagram
 		string full_name
 		string password_hash
 		boolean is_admin
+		boolean comment_spellcheck_enabled
 		datetime created_at
 	}
 
@@ -65,6 +75,7 @@ erDiagram
 		string code PK
 		int display_order
 		string description
+		string periodicity
 		int forms_per_period
 		boolean is_active
 		datetime created_at
@@ -74,8 +85,12 @@ erDiagram
 		int id PK
 		string ruref FK
 		string survey_code FK
+		boolean is_general
 		string period
 		text comment_text
+		string contact_name_snapshot
+		string contact_phone_snapshot
+		string contact_email_snapshot
 		int author_id FK
 		datetime created_at
 		datetime updated_at
@@ -90,11 +105,25 @@ erDiagram
 		text new_text
 	}
 
+	CONTACTS {
+		int id PK
+		string ruref FK
+		string survey_code FK
+		string name
+		string telephone_number
+		string email_address
+		datetime created_at
+		datetime updated_at
+	}
+
 	REPORTING_UNITS ||--o{ COMMENTS : has
+	REPORTING_UNITS ||--o{ CONTACTS : has
 	SURVEYS ||--o{ COMMENTS : categorises
+	SURVEYS ||--o{ CONTACTS : categorises
 	USERS ||--o{ COMMENTS : authors
 	COMMENTS ||--o{ COMMENT_EDITS : tracks
 	USERS ||--o{ COMMENT_EDITS : edits
+	
 ```
 
 ## Functional Behaviour
@@ -107,7 +136,7 @@ erDiagram
 	- Direct RUREF lookup
 	- Survey filter (single or multiple)
 	- Full-text contains search across comment text, key identifiers, and comment author name/username
-- Main page uses separate tabs for `Search` and `Add Comment`
+- Main page uses separate sections for `Search` and `Add Comment`
 - Search text matches are highlighted in the comment text shown in results
 - Search tab includes `Show Comments (Testing)` to load the lowest 10 RUREFs with comments, grouped in the usual survey order
 - Search results are shown only after a search is performed
@@ -161,6 +190,8 @@ erDiagram
 	- Search Results
 	- Show Comments (Testing)
 	- RUREF detail page
+- Add Comment includes a per-user spellcheck toggle for the comment field only.
+- Spellcheck preference changes are remembered for each user.
 
 ### Import Surveys (Admin)
 

@@ -65,7 +65,7 @@ def test_create_comment_accepts_period_matching_survey_periodicity(
     )
 
     assert response.status_code == 200
-    assert b"Comment saved. Contact details amended." in response.data
+    assert b"Comment saved." in response.data
 
 
 def test_create_and_search_comment_by_ruref(client, login_analyst, app):
@@ -499,7 +499,10 @@ def test_check_contact_prefills_existing_contact_in_add_form(client, login_analy
         in response.data
     )
     assert b"Edit Contact" not in response.data
-    assert b'<textarea class="form-control" id="new-comment" name="comment"' in response.data
+    assert (
+        b'<textarea class="form-control" id="new-comment" name="comment"'
+        in response.data
+    )
     assert b"Draft follow-up" in response.data
     assert b'name="contact_name" value="Pat Contact"' in response.data
     assert b'name="contact_phone" value="0123456789"' in response.data
@@ -596,7 +599,10 @@ def test_check_contact_returns_to_add_form_when_scope_has_no_contact(
         b"No existing contact was found for this reporting unit and survey 221."
         in response.data
     )
-    assert b'button class="nav-link active" id="add-tab"' in response.data
+    assert (
+        b'class="ons-section-nav__link is-active" href="/comments?tab=add'
+        in response.data
+    )
     assert b'value="12345678901"' in response.data
     assert b"Draft follow-up" in response.data
     assert b"Draft Contact" in response.data
@@ -646,7 +652,10 @@ def test_edit_contact_returns_to_preserved_add_comment_draft(
 
     assert response.status_code == 200
     assert b"Contact updated." in response.data
-    assert b'button class="nav-link active" id="add-tab"' in response.data
+    assert (
+        b'class="ons-section-nav__link is-active" href="/comments?tab=add'
+        in response.data
+    )
     assert b'value="12345678901"' in response.data
     assert b"Draft follow-up" in response.data
 

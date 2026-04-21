@@ -18,17 +18,18 @@
     <p class="ons-page-lead">Search comments by RU reference, survey, and text. Add new comments below.</p>
 </header>
 
-<ul class="nav nav-tabs mb-3" id="commentsTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link {% if not add_tab_active %}active{% endif %}" id="search-tab" data-bs-toggle="tab" data-bs-target="#search-tab-pane" type="button" role="tab" aria-controls="search-tab-pane" aria-selected="{{ 'true' if not add_tab_active else 'false' }}">Search</button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link {% if add_tab_active %}active{% endif %}" id="add-tab" data-bs-toggle="tab" data-bs-target="#add-tab-pane" type="button" role="tab" aria-controls="add-tab-pane" aria-selected="{{ 'true' if add_tab_active else 'false' }}">Add Comment</button>
-    </li>
-</ul>
+<nav class="ons-section-nav" aria-label="Search and Add sections">
+    <ul class="ons-section-nav__list">
+        <li class="ons-section-nav__item">
+            <a class="ons-section-nav__link {% if not add_tab_active %}is-active{% endif %}" href="{{ url_for('comments.index', ruref=ruref, q=q, surveys=selected_surveys, show_contacts='1' if show_contacts else '0', show_comments='1' if show_comments else None) }}">Search</a>
+        </li>
+        <li class="ons-section-nav__item">
+            <a class="ons-section-nav__link {% if add_tab_active %}is-active{% endif %}" href="{{ url_for('comments.index', tab='add', add_ruref=add_ruref, add_survey=add_survey, add_period=add_period, add_comment=add_comment, add_is_general='1' if add_is_general else '0', add_contact_name=add_contact_name, add_contact_phone=add_contact_phone, add_contact_email=add_contact_email) }}">Add Comment</a>
+        </li>
+    </ul>
+</nav>
 
-<div class="tab-content" id="commentsTabsContent">
-    <div class="tab-pane fade {% if not add_tab_active %}show active{% endif %}" id="search-tab-pane" role="tabpanel" aria-labelledby="search-tab" tabindex="0">
+{% if not add_tab_active %}
         <div class="mb-4">
             <h2 class="ons-section-title">Search</h2>
             <form class="row g-3" method="get" action="{{ url_for('comments.index') }}">
@@ -101,16 +102,17 @@
         </div>
 
         {% if search_performed %}
-        <div class="ons-panel">
+        <div class="ons-content-section">
             <h2 class="ons-section-title">{% if show_comments %}Comments{% else %}Search Results{% endif %}</h2>
             {% if show_comments %}
                 {% if ruref_groups %}
+                    <div class="ons-results-list">
                     {% for result_ruref, grouped_comments in ruref_groups.items() %}
-                    <section class="mb-4">
-                        <h3 class="h5">RUREF {{ result_ruref }}</h3>
+                    <section class="ons-results-group">
+                        <h3 class="ons-results-heading">RUREF {{ result_ruref }}</h3>
                         {% for survey_code, survey_comments in grouped_comments.items() %}
-                        <section class="mb-3">
-                            <h4 class="h6 mt-3">{% if survey_code == 'General' %}General{% else %}Survey {{ survey_code }}{% endif %}</h4>
+                        <section class="ons-results-subsection">
+                            <h4 class="ons-results-subheading">{% if survey_code == 'General' %}General{% else %}Survey {{ survey_code }}{% endif %}</h4>
                             {% for comment in survey_comments %}
                             <article class="comment-card">
                                 <p class="comment-period"><strong>{{ comment.period }}</strong></p>
@@ -137,12 +139,11 @@
                         {% endfor %}
                     </section>
                     {% endfor %}
+                    </div>
                 {% else %}
                     <p class="mb-0">No comments found.</p>
                 {% endif %}
             {% elif grouped_results %}
-                {% for survey_code, survey_comments in grouped_results.items() %}
-                <h3 class="h5 mt-3">{% if survey_code == 'General' %}General{% else %}Survey {{ survey_code }}{% endif %}</h3>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle search-results-table">
                         <colgroup>
@@ -162,6 +163,10 @@
                             </tr>
                         </thead>
                         <tbody>
+                        {% for survey_code, survey_comments in grouped_results.items() %}
+                            <tr>
+                                <th colspan="5" scope="colgroup">{% if survey_code == 'General' %}General{% else %}Survey {{ survey_code }}{% endif %}</th>
+                            </tr>
                         {% for comment in survey_comments %}
                             <tr>
                                 <td>{{ comment.period }}</td>
@@ -187,18 +192,16 @@
                                 <td><a href="{{ url_for('comments.ruref_detail', ruref=comment.ruref, show_contacts='1' if show_contacts else '0') }}">View RUREF</a></td>
                             </tr>
                         {% endfor %}
+                        {% endfor %}
                         </tbody>
                     </table>
                 </div>
-                {% endfor %}
             {% else %}
                 <p class="mb-0">No results found for this search.</p>
             {% endif %}
         </div>
         {% endif %}
-    </div>
-
-    <div class="tab-pane fade {% if add_tab_active %}show active{% endif %}" id="add-tab-pane" role="tabpanel" aria-labelledby="add-tab" tabindex="0">
+{% else %}
         <div class="mb-4">
             <h2 class="ons-section-title">Add Comment</h2>
             <form method="post" action="{{ url_for('comments.create_comment') }}">
@@ -256,8 +259,7 @@
                 </div>
             </form>
         </div>
-    </div>
-</div>
+{% endif %}
 
 {% endblock %}
 

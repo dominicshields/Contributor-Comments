@@ -12,3 +12,13 @@
 2026-04-20 09:39:28.101 BST [12263] LOG:  checkpoint complete: wrote 411 buffers (2.5%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 1 recycled; write=41.576 s, sync=0.013 s, total=41.610 s; sync files=93, longest=0.004 s, average=0.001 s; distance=4759 kB, estimate=4759 kB; lsn=0/5178570, redo lsn=0/5162148
 2026-04-20 11:38:46.135 BST [12263] LOG:  checkpoint starting: time
 2026-04-20 11:38:48.525 BST [12263] LOG:  checkpoint complete: wrote 23 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.372 s, sync=0.003 s, total=2.391 s; sync files=21, longest=0.001 s, average=0.001 s; distance=126 kB, estimate=4296 kB; lsn=0/5181C70, redo lsn=0/5181C18
+2026-04-21 09:18:05.920 BST [14548] LOG:  starting PostgreSQL 18.3 on aarch64-apple-darwin20.0.0, compiled by clang version 20.1.8, 64-bit
+2026-04-21 09:18:05.922 BST [14548] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-04-21 09:18:05.922 BST [14548] LOG:  listening on IPv6 address "::1", port 5432
+2026-04-21 09:18:05.926 BST [14548] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2026-04-21 09:18:05.950 BST [14554] LOG:  database system was shut down at 2026-04-20 15:16:39 BST
+2026-04-21 09:18:05.964 BST [14548] LOG:  database system is ready to accept connections
+2026-04-21 09:23:05.948 BST [14552] LOG:  checkpoint starting: time
+2026-04-21 09:23:47.483 BST [14552] LOG:  checkpoint complete: wrote 411 buffers (2.5%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=41.512 s, sync=0.002 s, total=41.535 s; sync files=35, longest=0.001 s, average=0.001 s; distance=4894 kB, estimate=4894 kB; lsn=0/5649698, redo lsn=0/5649608
+2026-04-21 09:43:05.433 BST [14552] LOG:  checkpoint starting: time
+2026-04-21 09:43:05.547 BST [14552] LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.104 s, sync=0.001 s, total=0.114 s; sync files=1, longest=0.001 s, average=0.001 s; distance=8 kB, estimate=4405 kB; lsn=0/564B728, redo lsn=0/564B6D0

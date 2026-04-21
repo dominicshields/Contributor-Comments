@@ -22,12 +22,13 @@
 </div>
 
 {% if search_performed %}
-<div class="ons-panel">
+<div class="ons-content-section">
     <h2 class="ons-section-title">Contact Results</h2>
     {% if grouped_contacts %}
+        <div class="ons-results-list">
         {% for result_ruref, contacts in grouped_contacts.items() %}
-        <section class="mb-4">
-            <h3 class="h5">RUREF {{ result_ruref }}</h3>
+        <section class="ons-results-group">
+            <h3 class="ons-results-heading">RUREF {{ result_ruref }}</h3>
             {% for contact in contacts %}
             <article class="comment-card">
                 <p class="comment-body mb-1"><strong>{% if contact.survey_code %}Survey {{ contact.survey_code }}{% else %}General{% endif %}</strong></p>
@@ -42,6 +43,7 @@
             {% endfor %}
         </section>
         {% endfor %}
+        </div>
     {% else %}
         <p class="mb-0">No contacts found.</p>
     {% endif %}

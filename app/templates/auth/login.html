@@ -9,14 +9,16 @@
 
 <div class="row justify-content-center">
     <div class="col-md-6">
+        {% if auth_mode == 'sso' %}
         <div class="ons-panel">
-            {% if auth_mode == 'sso' %}
             <p>This service uses Single Sign-On (SSO).</p>
             <p class="mb-2">If you are seeing this page directly, your SSO proxy headers are missing or not mapped.</p>
             {% if sso_error %}
             <div class="alert alert-danger mb-0" role="alert">{{ sso_error }}</div>
             {% endif %}
-            {% else %}
+        </div>
+        {% else %}
+        <div class="ons-content-section">
             <form method="post">
                 <div class="mb-3">
                     <label class="form-label" for="username">Username</label>
@@ -30,8 +32,8 @@
             </form>
             <hr>
             <p class="mb-0"><strong>Seeded test users:</strong> admin, analyst1, analyst2 (password: Password123!).</p>
-            {% endif %}
         </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

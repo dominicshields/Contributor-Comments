@@ -1,118 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Comments by Author | Contributor Comments{% endblock %}
 
-{% block extra_css %}
-<style>
-.author-group {
-    border: 1px solid #d6d6d6;
-    border-radius: 4px;
-    background: #fff;
-}
-
-.author-group + .author-group {
-    margin-top: 0.75rem;
-}
-
-.author-group-toggle {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    cursor: pointer;
-    padding: 0.5rem 0.85rem;
-    background: #f8fafb;
-    border-radius: 4px;
-    border: 0;
-    text-align: left;
-}
-
-.author-group-toggle::before {
-    content: ">";
-    display: inline-block;
-    margin-right: 0.4rem;
-    font-weight: 700;
-    color: #206095;
-    transform: rotate(0deg);
-}
-
-.author-group-title {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.45rem;
-    min-width: 0;
-    flex: 1 1 auto;
-}
-
-.author-group-title strong {
-    margin: 0;
-}
-
-.author-group-title .text-muted {
-    white-space: nowrap;
-}
-
-.author-group.is-open .author-group-toggle {
-    border-bottom: 1px solid #d6d6d6;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-}
-
-.author-group.is-open .author-group-toggle::before {
-    transform: rotate(90deg);
-}
-
-.author-group-content {
-    padding: 0.75rem 1rem 0.5rem;
-}
-
-.author-group-content[hidden] {
-    display: none;
-}
-
-.by-author-results-table {
-    margin-bottom: 0;
-}
-
-.by-author-results-table th,
-.by-author-results-table td {
-    padding-top: 0.65rem;
-    padding-bottom: 0.65rem;
-}
-
-.by-author-results-table th,
-.by-author-results-table td.meta-col,
-.by-author-results-table td.action-col {
-    white-space: nowrap;
-}
-
-.by-author-results-table td.meta-col {
-    color: #3d3d3d;
-}
-
-.by-author-results-table td.comment-col {
-    line-height: 1.45;
-    min-width: 20rem;
-}
-
-.by-author-results-table .col-ruref {
-    width: 9.5rem;
-}
-
-.by-author-results-table .col-survey {
-    width: 6.5rem;
-}
-
-.by-author-results-table .col-period {
-    width: 6.5rem;
-}
-
-.by-author-results-table .col-action {
-    width: 8rem;
-}
-</style>
-{% endblock %}
-
 {% block content %}
 <header class="ons-page-header">
     <h1 class="ons-page-title">Comments by Author</h1>
@@ -135,21 +23,21 @@
     </form>
 </div>
 
-<div class="p-3 border rounded bg-white">
+<div class="ons-content-section">
     <h2 class="ons-section-title">Results</h2>
     {% if comments_by_author %}
         {% for author_id, author_name, author_username in comments_by_author.keys() %}
         {% set author_comments = comments_by_author[(author_id, author_name, author_username)] %}
-        <section class="author-group is-open" data-author-group>
-            <button class="author-group-toggle" type="button" aria-expanded="true">
-                <span class="author-group-title">
+        <section class="ons-collapsible-group is-open" data-author-group>
+            <button class="ons-collapsible-group__toggle" type="button" aria-expanded="true">
+                <span class="ons-collapsible-group__title">
                     <strong>{{ author_name }} ({{ counts_by_author.get(author_id, 0) }})</strong>
-                    <span class="text-muted small">{{ author_username }}</span>
+                    <span class="ons-collapsible-group__meta">{{ author_username }}</span>
                 </span>
             </button>
-            <div class="author-group-content">
+            <div class="ons-collapsible-group__content">
             <div class="table-responsive">
-                <table class="table table-sm align-middle by-author-results-table">
+                <table class="table table-sm align-middle ons-grouped-table by-author-results-table">
                     <colgroup>
                         <col class="col-ruref">
                         <col class="col-survey">
@@ -218,8 +106,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const expandButton = document.querySelector('[data-expand-all]');
 
     function setGroupExpanded(group, expanded) {
-        const toggle = group.querySelector('.author-group-toggle');
-        const content = group.querySelector('.author-group-content');
+        const toggle = group.querySelector('.ons-collapsible-group__toggle');
+        const content = group.querySelector('.ons-collapsible-group__content');
 
         group.classList.toggle('is-open', expanded);
 
@@ -233,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     groups.forEach(function (group) {
-        const toggle = group.querySelector('.author-group-toggle');
+        const toggle = group.querySelector('.ons-collapsible-group__toggle');
 
         if (toggle) {
             toggle.addEventListener('click', function () {

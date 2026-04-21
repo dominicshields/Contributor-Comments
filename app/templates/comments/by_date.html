@@ -1,58 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Comments by Date | Contributor Comments{% endblock %}
 
-{% block extra_css %}
-<style>
-.by-date-results-table {
-    margin-bottom: 0;
-}
-
-.by-date-results-table th,
-.by-date-results-table td {
-    padding-top: 0.65rem;
-    padding-bottom: 0.65rem;
-}
-
-.by-date-results-table th,
-.by-date-results-table td.meta-col,
-.by-date-results-table td.action-col {
-    white-space: nowrap;
-}
-
-.by-date-results-table td.meta-col {
-    color: #3d3d3d;
-}
-
-.by-date-results-table td.comment-col {
-    line-height: 1.45;
-    min-width: 20rem;
-}
-
-.by-date-results-table .col-created {
-    width: 10.5rem;
-}
-
-.by-date-results-table .col-period {
-    width: 6.5rem;
-}
-
-.by-date-results-table .col-author {
-    width: 12rem;
-}
-
-.by-date-results-table .col-action {
-    width: 8rem;
-}
-</style>
-{% endblock %}
-
 {% block content %}
 <header class="ons-page-header">
     <h1 class="ons-page-title">Comments by Date</h1>
     <p class="ons-page-lead">Comments grouped by created year and month, then by RUREF and survey.</p>
 </header>
 
-<div class="mb-3">
+<div class="mb-3 ons-month-index">
     <div class="d-flex gap-2 justify-content-between align-items-center flex-wrap">
         <h2 class="ons-section-title mb-0">Results</h2>
         <div class="d-flex gap-2">
@@ -62,14 +17,14 @@
     </div>
     {% if grouped_by_date %}
         {% for year, months in grouped_by_date.items() %}
-        <details class="mb-3" data-year-group {% if selected_year == year %}open{% endif %}>
+        <details data-year-group {% if selected_year == year %}open{% endif %}>
             <summary>
                 <strong>{{ year }} ({{ year_counts.get(year, 0) }})</strong>
             </summary>
 
-            <div class="mt-2">
+            <div class="ons-month-index__months">
                 {% for month, count in months.items() %}
-                <div class="ms-3 mb-2">
+                <div class="ons-month-index__month">
                     <a class="text-decoration-none {% if selected_year == year and selected_month == month %}fw-bold{% endif %}" href="{{ url_for('comments.comments_by_date', year=year, month=month, page=1) }}#selected-month-results">
                         {{ month_names.get(month, month) }} ({{ count }})
                     </a>
@@ -84,7 +39,7 @@
 </div>
 
 {% if selected_year and selected_month %}
-    <div id="selected-month-results" class="p-3 border rounded bg-white mt-3" tabindex="-1">
+    <div id="selected-month-results" class="ons-content-section mt-3">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
         <h2 class="ons-section-title mb-0">{{ month_names.get(selected_month, selected_month) }} {{ selected_year }}</h2>
         <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('comments.comments_by_date') }}">Clear month</a>
@@ -92,9 +47,10 @@
 
     {% if selected_month_groups %}
         <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0 by-date-results-table">
+            <table class="table table-sm align-middle ons-grouped-table by-date-results-table">
                 <colgroup>
                     <col class="col-created">
+                    <col class="col-survey">
                     <col class="col-period">
                     <col class="col-author">
                     <col class="col-comment">
@@ -103,6 +59,7 @@
                 <thead>
                     <tr>
                         <th>Created</th>
+                        <th>Survey</th>
                         <th>Period</th>
                         <th>Author</th>
                         <th>Comment</th>
@@ -111,18 +68,14 @@
                 </thead>
                 <tbody>
                 {% for ruref, survey_groups in selected_month_groups.items() %}
-                    <tr class="table-light">
-                        <td colspan="5"><strong>RUREF {{ ruref }}</strong></td>
-                    </tr>
-
-                    {% for survey_label, survey_comments in survey_groups.items() %}
                     <tr>
-                        <td colspan="5" class="fw-semibold">{{ survey_label }}</td>
+                        <th colspan="6" scope="colgroup">RUREF {{ ruref }}</th>
                     </tr>
-
+                    {% for survey_label, survey_comments in survey_groups.items() %}
                         {% for comment in survey_comments %}
                         <tr>
                             <td class="meta-col">{{ comment.created_at | uk_datetime }}</td>
+                            <td class="meta-col">{{ survey_label }}</td>
                             <td class="meta-col">{{ comment.period }}</td>
                             <td class="meta-col">{{ comment.author.full_name }}</td>
                             <td class="comment-col">{{ comment.comment_text }}</td>

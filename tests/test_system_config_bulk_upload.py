@@ -4,7 +4,7 @@ import io
 from datetime import datetime, timezone
 
 from app.extensions import db
-from app.models import Comment, CommentEdit, Contact, ReportingUnit, Survey, User
+from app.models import Comment, CommentEdit, CommentTemplate, Contact, ReportingUnit, Survey, User
 
 
 def test_system_config_menu_includes_bulk_upload_for_admin(client, login_admin):
@@ -49,6 +49,112 @@ def test_system_info_page_requires_admin(client, login_analyst):
     response = client.get("/admin/system-config/system-info", follow_redirects=True)
     assert response.status_code == 200
     assert b"Admin access required" in response.data
+
+
+def test_available_templates_page_requires_admin(client, login_analyst):
+    response = client.get("/admin/system-config/templates", follow_redirects=True)
+    assert response.status_code == 200
+    assert b"Admin access required" in response.data
+
+
+def test_admin_can_view_available_templates_page(client, login_admin):
+    response = client.get("/admin/system-config/templates", follow_redirects=True)
+    assert response.status_code == 200
+    assert b"Available Templates" in response.data
+
+
+def test_admin_can_add_available_template(client, login_admin, app):
+    response = client.post(
+        "/admin/system-config/templates",
+        data={"wording": "New standard wording", "is_active": "1"},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    assert b"Template added." in response.data
+
+    with app.app_context():
+        template = CommentTemplate.query.filter_by(wording="New standard wording").first()
+        assert template is not None
+        assert template.is_active is True
+
+
+def test_admin_can_update_available_template(client, login_admin, app):
+    with app.app_context():
+        template = CommentTemplate(wording="Original wording", is_active=True)
+        db.session.add(template)
+        db.session.commit()
+        template_id = template.id
+
+    response = client.post(
+        f"/admin/system-config/templates/{template_id}",
+        data={"wording": "Updated wording", "is_active": "0"},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    assert b"Template updated." in response.data
+
+    with app.app_context():
+        template = db.session.get(CommentTemplate, template_id)
+        assert template is not None
+        assert template.wording == "Updated wording"
+        assert template.is_active is False
+
+
+def test_admin_can_move_template_up(client, login_admin, app):
+    with app.app_context():
+        first = CommentTemplate(wording="First", is_active=True, display_order=1)
+        second = CommentTemplate(wording="Second", is_active=True, display_order=2)
+        db.session.add_all([first, second])
+        db.session.commit()
+        second_id = second.id
+
+    response = client.post(
+        f"/admin/system-config/templates/{second_id}/move",
+        data={"direction": "up"},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+
+    with app.app_context():
+        ordered = (
+            CommentTemplate.query.filter(
+                CommentTemplate.wording.in_(["First", "Second"])
+            )
+            .order_by(CommentTemplate.display_order.asc())
+            .all()
+        )
+        assert ordered[0].wording == "Second"
+        assert ordered[1].wording == "First"
+
+
+def test_add_comment_template_popup_respects_configured_order(client, login_admin, app):
+    with app.app_context():
+        first = CommentTemplate(wording="Order First", is_active=True, display_order=1)
+        second = CommentTemplate(wording="Order Second", is_active=True, display_order=2)
+        db.session.add_all([first, second])
+        db.session.commit()
+
+        first_id = first.id
+        second_id = second.id
+
+    client.post(
+        f"/admin/system-config/templates/{second_id}/move",
+        data={"direction": "up"},
+        follow_redirects=True,
+    )
+
+    response = client.get("/comments?tab=add", follow_redirects=True)
+    assert response.status_code == 200
+
+    page = response.data.decode("utf-8")
+    assert page.find("Order Second") < page.find("Order First")
+
+
+def test_add_comment_page_shows_template_popup_trigger_for_all_users(client, login_analyst):
+    response = client.get("/comments?tab=add", follow_redirects=True)
+    assert response.status_code == 200
+    assert b"Insert from template" in response.data
+    assert b"Filter templates" in response.data
 
 
 def test_bulk_upload_comments_imports_valid_rows_and_skips_invalid(

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .extensions import db
-from .models import Survey, User
+from .models import CommentTemplate, Survey, User
 from .validation import is_valid_survey_periodicity
 
 
@@ -20,6 +20,20 @@ TEST_USERS = [
     {"username": "admin", "full_name": "Admin User", "password": "Password123!", "is_admin": True},
     {"username": "analyst1", "full_name": "Analyst One", "password": "Password123!", "is_admin": False},
     {"username": "analyst2", "full_name": "Analyst Two", "password": "Password123!", "is_admin": False},
+]
+
+DEFAULT_COMMENT_TEMPLATES = [
+    "Contact gave figures over the 'phone",
+    "Contact unavailable until ...... recontact",
+    "Contributor checking queries and will 'phone back",
+    "Contributor unable to complete form by deadline due to ........ will return by .....",
+    "Emailed/faxed duplicate form on request",
+    "Enforcement call made...",
+    "Estimated figures given, correct figures will be sent in asap",
+    "Left message with colleague/on voicemail chasing form",
+    "Nil return given over the 'phone",
+    "No inquiry form received",
+    "Requested return of overdue form",
 ]
 
 
@@ -60,5 +74,24 @@ def seed_reference_data() -> None:
         )
         user.set_password(user_data["password"])
         db.session.add(user)
+
+    existing_templates = {
+        (template.wording or "").strip()
+        for template in CommentTemplate.query.all()
+    }
+    for wording in DEFAULT_COMMENT_TEMPLATES:
+        normalized = wording.strip()
+        if normalized in existing_templates:
+            continue
+
+        max_order = db.session.query(db.func.max(CommentTemplate.display_order)).scalar() or 0
+        db.session.add(
+            CommentTemplate(
+                wording=normalized,
+                is_active=True,
+                display_order=max_order + 1,
+            )
+        )
+        existing_templates.add(normalized)
 
     db.session.commit()

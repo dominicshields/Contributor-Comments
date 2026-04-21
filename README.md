@@ -51,6 +51,13 @@ Contributor Comments is a Flask + Jinja application for capturing and searching 
 - `users`
 	- App login users (author/editor identity source)
 	- Includes per-user UI preferences such as add-comment spellcheck
+- `comment_templates`
+	- `id` (PK)
+	- `display_order`
+	- `wording` (standard template text)
+	- `is_active`
+	- `created_at` (UTC)
+	- `updated_at` (UTC)
 
 ## ER Diagram
 
@@ -116,6 +123,15 @@ erDiagram
 		datetime updated_at
 	}
 
+	COMMENT_TEMPLATES {
+		int id PK
+		int display_order
+		text wording
+		boolean is_active
+		datetime created_at
+		datetime updated_at
+	}
+
 	REPORTING_UNITS ||--o{ COMMENTS : has
 	REPORTING_UNITS ||--o{ CONTACTS : has
 	SURVEYS ||--o{ COMMENTS : categorises
@@ -171,6 +187,9 @@ erDiagram
 	- When RUREF and survey scope are entered, existing contact details for that scope are pre-filled automatically
 	- Users can amend those contact fields directly when saving a new comment
 	- If amended, the scoped contact is updated and the comment is saved in one step
+	- Add Comment includes an `Insert from template` popup for standard wording
+	- Selecting a template appends wording to the comment text (it does not overwrite existing text)
+	- The template popup includes a filter box for fast wording lookup
 - Contact editing is available to all authenticated users
 - Admin survey metadata supports create, update, activate/deactivate, and complete delete (with confirmation)
 
@@ -259,6 +278,17 @@ Import rules:
 		- Number of Reporting Units with contacts
 		- Total number of contacts
 		- Count of contacts by survey scope (`General` and survey code)
+
+### System Config: Available Templates (Admin)
+
+- System Config includes an `Available Templates` submenu for admin users.
+- The page supports:
+	- View all template wordings
+	- Add new template wording
+	- Edit existing template wording
+	- Activate/deactivate templates
+	- Move templates up/down to control display order in Add Comment
+- Add Comment displays only active templates, ordered by configured template display order.
 
 ### System Config: Delete all comments and contacts (Admin)
 

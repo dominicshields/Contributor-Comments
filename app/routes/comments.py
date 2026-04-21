@@ -9,11 +9,56 @@ from flask_login import current_user, login_required
 from sqlalchemy import distinct, or_
 
 from ..extensions import db
-from ..models import Comment, CommentEdit, Contact, ReportingUnit, Survey, User
+from ..models import Comment, CommentEdit, Contact, ReportingUnit, SiteContent, Survey, User
 from ..validation import is_period_allowed_for_survey, is_valid_period, is_valid_ruref
 
 bp = Blueprint("comments", __name__)
 GENERAL_GROUP_KEY = "General"
+HELP_CONTENT_KEY = "help_page"
+DEFAULT_HELP_CONTENT = """Search and Add
+
+Search tab: Use one or more filters and select Run Search.
+- RUREF: exact 11-digit reporting unit reference.
+- Full Text Search: searches comment text, RUREF, period, survey code, and author.
+- Surveys: limit to selected survey codes.
+- Show Comments (Testing): shows the lowest 10 RUREFs with comments, grouped by survey.
+
+Add Comment tab: Enter RUREF, Survey, Period, and Comment, then select Save Comment.
+- RUREF must be exactly 11 numeric characters.
+- Period must be valid YYYYMM.
+- Period month must match survey periodicity rules.
+
+Comments Views
+
+Use the top navigation Comments menu for grouped views.
+- Comments by Author: filter by author name/username, grouped by author with counts, ordered by RUREF then survey, with Collapse all / Expand all controls.
+- Comments by Date: starts as a collapsed year/month index with counts for all years; selecting a month opens month-specific results grouped by RUREF then survey, with pagination after month selection (50 comments per page).
+
+Survey Metadata
+
+Use Survey Metadata to maintain surveys used by comment capture and search.
+- Add new survey code, description, periodicity, and forms per period.
+- Update existing survey metadata with Save.
+- Use Activate/Deactivate to control whether a survey is usable.
+- Use Delete to permanently remove a survey and related comments.
+- Use Import Surveys to upsert from surveys.csv.
+
+System Config (Admin)
+
+- System Info: summary counts, database size, and grouped comment counts.
+- Bulk Upload Comments: upload a CSV file of comments.
+- Delete all comments and contacts: remove all comments, edit history, and contacts.
+Note: this destructive utility is temporary and should be retired once the live system is in place.
+
+Bulk upload CSV required columns: ruref, period, comment_text.
+Optional columns: survey_code, is_general, author_name, saved_at, contact_name, contact_phone, contact_email.
+
+Troubleshooting
+
+- If no results appear, check RUREF format and selected survey filters.
+- If Add Comment fails, check period format and survey periodicity month rules.
+- If access is denied to System Config pages, your user may not have admin rights.
+"""
 
 
 def _query_flag(name: str, default: bool = False) -> bool:
@@ -82,6 +127,23 @@ def _has_add_comment_return_state(state: dict[str, str]) -> bool:
 
 def _format_count_for_display(value: int) -> str:
     return f"{value:,}".replace(",", " ")
+
+
+def _get_help_content() -> str:
+    stored = db.session.get(SiteContent, HELP_CONTENT_KEY)
+    if stored is None or not stored.content.strip():
+        return DEFAULT_HELP_CONTENT
+    return stored.content
+
+
+def _save_help_content(content: str) -> None:
+    stored = db.session.get(SiteContent, HELP_CONTENT_KEY)
+    if stored is None:
+        stored = SiteContent(key=HELP_CONTENT_KEY, content=content)
+        db.session.add(stored)
+    else:
+        stored.content = content
+    db.session.commit()
 
 
 def _survey_order_map() -> dict[str, int]:
@@ -365,7 +427,32 @@ def index():
 @bp.get("/help")
 @login_required
 def help_page():
-    return render_template("help/index.html")
+    return render_template(
+        "help/index.html",
+        help_content=_get_help_content(),
+    )
+
+
+@bp.route("/help/edit", methods=["GET", "POST"])
+@login_required
+def edit_help_page():
+    if not current_user.is_admin:
+        flash("Admin access required.", "error")
+        return redirect(url_for("comments.help_page"))
+
+    if request.method == "POST":
+        content = request.form.get("content", "").strip()
+        if not content:
+            flash("Help content cannot be empty.", "error")
+        else:
+            _save_help_content(content)
+            flash("Help page updated.", "success")
+            return redirect(url_for("comments.help_page"))
+
+    return render_template(
+        "help/edit.html",
+        content=_get_help_content(),
+    )
 
 
 @bp.get("/comments/by-author")

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Edit Help | Contributor Comments{% endblock %}
+
+{% block content %}
+<header class="ons-page-header">
+    <h1 class="ons-page-title">Edit Help Page</h1>
+    <p class="ons-page-lead">Update Help guidance shown to all signed-in users.</p>
+</header>
+
+<form method="post">
+    <div class="mb-3">
+        <label class="form-label" for="content">Help Content</label>
+        <textarea
+            class="form-control"
+            id="content"
+            name="content"
+            rows="24"
+            required
+        >{{ content }}</textarea>
+    </div>
+    <div class="mt-3">
+        <button class="btn btn-primary" type="submit">Save Help Page</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('comments.help_page') }}">Cancel</a>
+    </div>
+</form>
+{% endblock %}

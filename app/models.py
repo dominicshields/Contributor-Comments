@@ -212,3 +212,16 @@ class Contact(db.Model):
         CheckConstraint("length(ruref) = 11", name="ck_contacts_ruref_len"),
         UniqueConstraint("ruref", "survey_code", name="uq_contacts_ruref_survey"),
     )
+
+
+class SiteContent(db.Model):
+    __tablename__ = "site_content"
+
+    key: Mapped[str] = mapped_column(String(100), primary_key=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )

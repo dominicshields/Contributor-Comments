@@ -9,7 +9,17 @@
 
 {% if current_user.is_admin %}
 <div class="mb-4">
-    <h2 class="ons-section-title">Add Survey</h2>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="ons-section-title mb-0">Add Survey</h2>
+        <a
+            class="btn btn-light border"
+            href="https://www.ons.gov.uk/surveys/informationforbusinesses/businesssurveys/staticlist"
+            target="_blank"
+            rel="noopener noreferrer"
+        >
+            Survey Information
+        </a>
+    </div>
     <button
         class="btn btn-primary"
         type="button"

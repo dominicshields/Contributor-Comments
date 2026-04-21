@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from app.extensions import db
-from app.models import Comment, Contact, ReportingUnit, Survey, User
+from app.models import Comment, Contact, ReportingUnit, SiteContent, Survey, User
 
 
 def test_create_comment_rejects_invalid_period(client, login_analyst):
@@ -401,6 +401,37 @@ def test_help_page_visible_for_logged_in_user(client, login_analyst):
     assert response.status_code == 200
     assert b"How to use Contributor Comments day to day." in response.data
     assert b"System Config (Admin)" in response.data
+
+
+def test_help_edit_page_requires_admin(client, login_analyst):
+    response = client.get("/help/edit", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"Admin access required." in response.data
+
+
+def test_help_edit_page_visible_for_admin(client, login_admin):
+    response = client.get("/help/edit", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"Edit Help Page" in response.data
+
+
+def test_admin_can_update_help_page_content(client, login_admin, app):
+    response = client.post(
+        "/help/edit",
+        data={"content": "Updated help text for admins."},
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Help page updated." in response.data
+    assert b"Updated help text for admins." in response.data
+
+    with app.app_context():
+        stored = db.session.get(SiteContent, "help_page")
+        assert stored is not None
+        assert stored.content == "Updated help text for admins."
 
 
 def test_general_comment_is_saved_and_grouped_before_surveys(client, login_analyst):

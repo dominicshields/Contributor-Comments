@@ -582,6 +582,11 @@ def system_info():
     if not _ensure_admin():
         return redirect(url_for("comments.index"))
 
+    requested_tab = request.args.get("tab", "comments").strip().lower()
+    active_tab = (
+        requested_tab if requested_tab in {"comments", "contacts"} else "comments"
+    )
+
     reporting_units_with_comments = (
         db.session.query(db.func.count(distinct(Comment.ruref))).scalar() or 0
     )
@@ -627,6 +632,7 @@ def system_info():
 
     return render_template(
         "admin/system_info.html",
+        active_tab=active_tab,
         reporting_units_with_comments=reporting_units_with_comments,
         total_comments=total_comments,
         total_comment_authors=total_comment_authors,

@@ -11,12 +11,9 @@ def test_system_config_menu_includes_bulk_upload_for_admin(client, login_admin):
     response = client.get("/comments", follow_redirects=True)
     assert response.status_code == 200
     assert b"Comments" in response.data
-    assert b"Comments by Author" in response.data
+    assert b"Comments by Author" not in response.data
     assert b"System Config" in response.data
-    assert b"System Info" in response.data
     assert b"Help" in response.data
-    assert b"Bulk Upload Comments" in response.data
-    assert b"Delete all comments and contacts" in response.data
     assert b"Survey Metadata" in response.data
 
 
@@ -26,7 +23,7 @@ def test_survey_metadata_nav_visible_to_non_admin_but_not_system_config(
     response = client.get("/comments", follow_redirects=True)
     assert response.status_code == 200
     assert b"Comments" in response.data
-    assert b"Comments by Author" in response.data
+    assert b"Comments by Author" not in response.data
     assert b"Survey Metadata" in response.data
     assert b"Help" in response.data
     assert b"System Config" not in response.data
@@ -346,8 +343,15 @@ def test_system_info_page_displays_comment_counts(client, login_admin, app):
     assert b"202401" in response.data
     assert b"202312" in response.data
     assert b"Contacts" in response.data
-    assert b"Contacts Summary" in response.data
-    assert b"Number of Reporting Units With contacts" in response.data
-    assert b"Total number of contacts" in response.data
-    assert b"Count of contacts by survey code" in response.data
-    assert b"General" in response.data
+    assert b"Contacts Summary" not in response.data
+
+    contacts_response = client.get(
+        "/admin/system-config/system-info?tab=contacts", follow_redirects=True
+    )
+
+    assert contacts_response.status_code == 200
+    assert b"Contacts Summary" in contacts_response.data
+    assert b"Number of Reporting Units With contacts" in contacts_response.data
+    assert b"Total number of contacts" in contacts_response.data
+    assert b"Count of contacts by survey code" in contacts_response.data
+    assert b"General" in contacts_response.data

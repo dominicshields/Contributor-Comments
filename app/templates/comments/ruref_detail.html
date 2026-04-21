@@ -86,7 +86,7 @@
 </div>
 
 {% if grouped_comments %}
-    <div class="ons-panel">
+    <div class="ons-content-section">
         {% for survey_code, survey_comments in grouped_comments.items() %}
         <section class="mb-4">
             <h2 class="ons-section-title">{% if survey_code == 'General' %}General{% else %}Survey {{ survey_code }}{% endif %}</h2>
@@ -116,7 +116,7 @@
         {% endfor %}
     </div>
 {% else %}
-    <div class="ons-panel">
+    <div class="ons-content-section">
         <p class="mb-0">No comments found for this RUREF and filters.</p>
     </div>
 {% endif %}

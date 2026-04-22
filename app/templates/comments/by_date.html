@@ -54,7 +54,6 @@
                     <col class="col-period">
                     <col class="col-author">
                     <col class="col-comment">
-                    <col class="col-action">
                 </colgroup>
                 <thead>
                     <tr>
@@ -63,13 +62,14 @@
                         <th>Period</th>
                         <th>Author</th>
                         <th>Comment</th>
-                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
                 {% for ruref, survey_groups in selected_month_groups.items() %}
                     <tr>
-                        <th colspan="6" scope="colgroup">RUREF {{ ruref }}</th>
+                        <th colspan="5" scope="colgroup">
+                            <a href="{{ url_for('comments.ruref_detail', ruref=ruref) }}">RUREF {{ ruref }}</a>
+                        </th>
                     </tr>
                     {% for survey_label, survey_comments in survey_groups.items() %}
                         {% for comment in survey_comments %}
@@ -79,7 +79,6 @@
                             <td class="meta-col">{{ comment.period }}</td>
                             <td class="meta-col">{{ comment.author.full_name }}</td>
                             <td class="comment-col">{{ comment.comment_text }}</td>
-                            <td class="action-col"><a href="{{ url_for('comments.ruref_detail', ruref=comment.ruref) }}">View RUREF</a></td>
                         </tr>
                         {% endfor %}
                     {% endfor %}

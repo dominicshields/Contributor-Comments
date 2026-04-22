@@ -43,7 +43,6 @@
                         <col class="col-survey">
                         <col class="col-period">
                         <col class="col-comment">
-                        <col class="col-action">
                     </colgroup>
                     <thead>
                         <tr>
@@ -51,17 +50,15 @@
                             <th>Survey</th>
                             <th>Period</th>
                             <th>Comment</th>
-                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                     {% for comment in author_comments %}
                         <tr>
-                            <td class="meta-col">{{ comment.ruref }}</td>
+                            <td class="meta-col"><a href="{{ url_for('comments.ruref_detail', ruref=comment.ruref) }}">{{ comment.ruref }}</a></td>
                             <td class="meta-col">{% if comment.is_general %}General{% else %}{{ comment.survey_code }}{% endif %}</td>
                             <td class="meta-col">{{ comment.period }}</td>
                             <td class="comment-col">{{ comment.comment_text }}</td>
-                            <td class="action-col"><a href="{{ url_for('comments.ruref_detail', ruref=comment.ruref) }}">View RUREF</a></td>
                         </tr>
                     {% endfor %}
                     </tbody>

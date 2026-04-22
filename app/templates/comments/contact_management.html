@@ -28,7 +28,9 @@
         <div class="ons-results-list">
         {% for result_ruref, contacts in grouped_contacts.items() %}
         <section class="ons-results-group">
-            <h3 class="ons-results-heading">RUREF {{ result_ruref }}</h3>
+            <h3 class="ons-results-heading">
+                <a href="{{ url_for('comments.ruref_detail', ruref=result_ruref) }}">RUREF {{ result_ruref }}</a>
+            </h3>
             {% for contact in contacts %}
             <article class="comment-card">
                 <p class="comment-body mb-1"><strong>{% if contact.survey_code %}Survey {{ contact.survey_code }}{% else %}General{% endif %}</strong></p>

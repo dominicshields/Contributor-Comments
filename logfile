@@ -22,3 +22,17 @@
 2026-04-21 09:23:47.483 BST [14552] LOG:  checkpoint complete: wrote 411 buffers (2.5%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=41.512 s, sync=0.002 s, total=41.535 s; sync files=35, longest=0.001 s, average=0.001 s; distance=4894 kB, estimate=4894 kB; lsn=0/5649698, redo lsn=0/5649608
 2026-04-21 09:43:05.433 BST [14552] LOG:  checkpoint starting: time
 2026-04-21 09:43:05.547 BST [14552] LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.104 s, sync=0.001 s, total=0.114 s; sync files=1, longest=0.001 s, average=0.001 s; distance=8 kB, estimate=4405 kB; lsn=0/564B728, redo lsn=0/564B6D0
+2026-04-22 09:13:48.240 BST [22022] LOG:  starting PostgreSQL 18.3 on aarch64-apple-darwin20.0.0, compiled by clang version 20.1.8, 64-bit
+2026-04-22 09:13:48.242 BST [22022] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-04-22 09:13:48.242 BST [22022] LOG:  listening on IPv6 address "::1", port 5432
+2026-04-22 09:13:48.243 BST [22022] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2026-04-22 09:13:48.262 BST [22028] LOG:  database system was shut down at 2026-04-21 15:10:31 BST
+2026-04-22 09:13:48.277 BST [22022] LOG:  database system is ready to accept connections
+2026-04-22 09:18:48.261 BST [22026] LOG:  checkpoint starting: time
+2026-04-22 09:18:55.673 BST [22026] LOG:  checkpoint complete: wrote 73 buffers (0.4%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=7.392 s, sync=0.005 s, total=7.412 s; sync files=49, longest=0.001 s, average=0.001 s; distance=383 kB, estimate=383 kB; lsn=0/570F420, redo lsn=0/570F390
+2026-04-22 10:13:48.739 BST [22026] LOG:  checkpoint starting: time
+2026-04-22 10:13:49.067 BST [22026] LOG:  checkpoint complete: wrote 3 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.314 s, sync=0.002 s, total=0.328 s; sync files=3, longest=0.001 s, average=0.001 s; distance=23 kB, estimate=347 kB; lsn=0/5715338, redo lsn=0/57152E0
+2026-04-22 11:23:48.020 BST [22026] LOG:  checkpoint starting: time
+2026-04-22 11:23:48.764 BST [22026] LOG:  checkpoint complete: wrote 7 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.724 s, sync=0.002 s, total=0.745 s; sync files=8, longest=0.001 s, average=0.001 s; distance=28 kB, estimate=315 kB; lsn=0/571C5C0, redo lsn=0/571C530
+2026-04-22 11:33:48.740 BST [22026] LOG:  checkpoint starting: time
+2026-04-22 11:33:49.744 BST [22026] LOG:  checkpoint complete: wrote 9 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.977 s, sync=0.002 s, total=1.005 s; sync files=10, longest=0.001 s, average=0.001 s; distance=26 kB, estimate=286 kB; lsn=0/5722E40, redo lsn=0/5722DB0

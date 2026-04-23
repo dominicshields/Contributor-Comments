@@ -300,15 +300,15 @@ Import rules:
 
 ### Search Results for `boron`
 
-![Search results for boron](docs/screenshots/search-boron.png)
+![Search results for boron](docs/screenshots/search-boron-v2.png)
 
 ### Survey Metadata
 
-![Survey metadata page](docs/screenshots/survey-metadata.png)
+![Survey metadata page](docs/screenshots/survey-metadata-v2.png)
 
 ### System Information
 
-![System information page](docs/screenshots/system-info.png)
+![System information page](docs/screenshots/system-info-v2.png)
 
 ## Seed Data
 

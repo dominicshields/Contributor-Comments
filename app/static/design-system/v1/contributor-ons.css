@@ -1078,6 +1078,12 @@ nav.ons-section-nav>ul.ons-section-nav__list {
     vertical-align: top;
 }
 
+.search-results-table td:nth-child(2),
+.search-results-table th:nth-child(2) {
+    white-space: nowrap;
+    word-break: normal;
+}
+
 .by-date-results-table {
     table-layout: fixed;
     width: 100%;

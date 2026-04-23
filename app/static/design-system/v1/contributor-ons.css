@@ -225,15 +225,27 @@ a:focus {
 
 .ons-primary-nav__container {
     display: block;
+    text-align: left !important;
 }
 
 .ons-primary-nav__list {
     list-style: none;
     display: flex;
     flex-wrap: wrap;
+    justify-content: flex-start !important;
     gap: 0;
-    margin: 0;
-    padding: 0;
+    margin: 0 !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+    padding: 0 !important;
+    padding-left: 0 !important;
+    width: 100% !important;
+}
+
+.ons-primary-nav .navbar-collapse {
+    display: flex !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
 }
 
 .ons-primary-nav__list li {
@@ -281,9 +293,14 @@ a:focus {
     list-style: none;
     display: flex;
     flex-wrap: wrap;
+    justify-content: flex-start !important;
     gap: 0;
-    margin: 0;
-    padding: 0;
+    margin: 0 !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+    padding: 0 !important;
+    padding-left: 0 !important;
+    width: 100% !important;
 }
 
 .ons-secondary-nav__list li {
@@ -389,13 +406,34 @@ a:focus {
     border-bottom: 1px solid var(--ons-grey-15);
 }
 
-.ons-section-nav__list {
+/*
+   Ensure in-page section tabs (e.g. Search/Add) are left-aligned.
+   The ONS CDN stylesheet can centre these; override without changing page width.
+*/
+.ons-main .ons-section-nav {
+    display: block !important;
+    text-align: left !important;
+}
+
+nav.ons-section-nav>ul.ons-section-nav__list {
     list-style: none;
-    display: flex;
+    display: flex !important;
     flex-wrap: wrap;
+    justify-content: flex-start !important;
+    align-items: flex-end;
+    width: 100% !important;
     gap: 0.5rem 1.25rem;
-    margin: 0;
-    padding: 0;
+    margin: 0 !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+    padding: 0 !important;
+    padding-left: 0 !important;
+    text-align: left !important;
+}
+
+.ons-main .ons-section-nav .ons-section-nav__item {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
 }
 
 .ons-section-nav__item {

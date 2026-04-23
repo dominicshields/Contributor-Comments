@@ -34,6 +34,338 @@
     /* Night blue */
     --ons-info-tint: #e9eff4;
     /* Information panel body */
+
+    /* Layout */
+    --ons-container-max-width: 64rem;
+}
+
+/* ONS container (64rem max-width for internal services) */
+.ons-container {
+    max-width: var(--ons-container-max-width);
+    margin: 0 auto;
+    padding: 0 1rem;
+    width: 100%;
+}
+
+/* Header - Internal variant */
+.ons-header {
+    background: var(--ons-white);
+    border-bottom: 2px solid var(--ons-grey-15);
+}
+
+.ons-header__top {
+    background: #003c57; /* Dark blue - night */
+    padding: 0.5rem 0;
+}
+
+.ons-header__org-logo-link {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--ons-white);
+    font-weight: 700;
+    text-decoration: none;
+    font-size: 0.85rem;
+}
+
+.ons-header__org-logo-link:hover,
+.ons-header__org-logo-link:focus {
+    color: var(--ons-white);
+    text-decoration: underline;
+}
+
+.ons-header__org-logo-text {
+    color: var(--ons-white);
+}
+
+.ons-header__grid-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.ons-header__service-links {
+    display: flex;
+    align-items: center;
+}
+
+.ons-header__service-links-list {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.ons-header__service-links-name {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+}
+
+.ons-header__main {
+    background: #206095; /* Ocean blue - lighter blue */
+    padding: 0.75rem 0;
+}
+
+.ons-header__title-link {
+    text-decoration: none;
+}
+
+.ons-header__title {
+    color: var(--ons-blue);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* Header main has blue background, so title must be white */
+.ons-header__main .ons-header__title-link .ons-header__title {
+    color: var(--ons-white);
+}
+
+.ons-header__title-link:hover .ons-header__title,
+.ons-header__title-link:focus .ons-header__title {
+    color: var(--ons-white);
+    text-decoration: underline;
+}
+    text-decoration: underline;
+}
+
+.ons-header__nav {
+    background: var(--ons-grey-95);
+    border-bottom: 1px solid var(--ons-grey-15);
+}
+
+.ons-header__nav-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+.ons-header__nav-item {
+    margin: 0;
+}
+
+.ons-header__nav-link {
+    display: block;
+    color: var(--ons-blue);
+    font-weight: 400;
+    text-decoration: none;
+    padding: 0.75rem 1rem;
+    border-bottom: 3px solid transparent;
+}
+
+.ons-header__nav-link:hover,
+.ons-header__nav-link:focus {
+    color: var(--ons-blue);
+    text-decoration: underline;
+    background: var(--ons-white);
+}
+
+.ons-header__nav-link--active {
+    font-weight: 700;
+    border-bottom-color: var(--ons-blue-alt);
+    background: var(--ons-white);
+}
+
+.ons-header__sub-nav {
+    background: var(--ons-info-tint);
+    border-bottom: 1px solid var(--ons-grey-15);
+}
+
+.ons-header__sub-nav-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+.ons-header__sub-nav-link {
+    display: block;
+    color: var(--ons-blue);
+    font-weight: 400;
+    text-decoration: none;
+    padding: 0.65rem 1rem;
+    border-bottom: 3px solid transparent;
+}
+
+.ons-header__sub-nav-link:hover,
+.ons-header__sub-nav-link:focus {
+    color: var(--ons-blue);
+    background: var(--ons-white);
+    text-decoration: underline;
+}
+
+.ons-header__sub-nav-link--active {
+    font-weight: 700;
+    border-bottom-color: var(--ons-blue-alt);
+    background: var(--ons-white);
+}
+
+/* Main content area */
+.ons-main {
+    padding: 1.5rem 0 2rem;
+}
+
+/* Footer */
+.ons-footer {
+    background: var(--ons-grey-95);
+    border-top: 1px solid var(--ons-grey-15);
+    padding: 1.25rem 0 1.5rem;
+    margin-top: 2rem;
+}
+
+.ons-footer__nav {
+    margin-bottom: 0.75rem;
+}
+
+.ons-footer__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+    list-style: none;
+    margin: 0 0 0.85rem;
+    padding: 0;
+}
+
+.ons-footer__list a {
+    color: var(--ons-link);
+    text-decoration: none;
+}
+
+.ons-footer__list a:hover,
+.ons-footer__list a:focus {
+    color: var(--ons-link-hover);
+    text-decoration: underline;
+}
+
+.ons-footer__legal {
+    color: var(--ons-grey-75);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+/* Header service navigation */
+.ons-header-service-nav {
+    display: inline-block;
+}
+
+.ons-header-service-nav--main {
+    display: none;
+}
+
+@media (min-width: 32em) {
+    .ons-header-service-nav--main {
+        display: inline-block;
+    }
+}
+
+.ons-header-service-nav__list {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.ons-header-service-nav__item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--ons-white);
+    font-size: 0.9rem;
+    font-weight: 400;
+}
+
+.ons-header-service-nav__item svg {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+
+.ons-header-service-nav__link {
+    color: var(--ons-white);
+    text-decoration: underline;
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
+.ons-header-service-nav__link:hover,
+.ons-header-service-nav__link:focus {
+    color: var(--ons-white);
+    text-decoration: none;
+}
+
+/* Header title - white variant */
+.ons-header__title-link .ons-header__title {
+    color: var(--ons-blue);
+}
+
+.ons-header__title-link:hover .ons-header__title,
+.ons-header__title-link:focus .ons-header__title {
+    text-decoration: underline;
+}
+
+/* Responsive utilities */
+.ons-grid {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 -0.5rem;
+}
+
+.ons-grid-flex {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.ons-grid-flex--between {
+    justify-content: space-between;
+}
+
+.ons-grid-flex--vertical-center {
+    align-items: center;
+}
+
+.ons-grid-flex--no-wrap {
+    flex-wrap: nowrap;
+}
+
+.ons-grid--gutterless {
+    margin: 0;
+}
+
+.ons-grid__col {
+    padding: 0 0.5rem;
+}
+
+.ons-col-auto {
+    flex: 0 1 auto;
+}
+
+@media (min-width: 32em) {
+    .ons-u-d-no@2xs\@m {
+        display: inline-block !important;
+    }
+}
+
+@media (min-width: 48em) {
+    .ons-u-d-no\@m {
+        display: none !important;
+    }
 }
 
 body {

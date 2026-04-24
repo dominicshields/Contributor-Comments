@@ -89,7 +89,7 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 0.5rem;
-    padding: 0.875rem 0;
+    padding: 0.625rem 0;
 }
 
 .ons-header__service-links {
@@ -123,7 +123,7 @@
 
 .ons-header__title {
     color: var(--ons-blue);
-    font-size: 1.5625rem;
+    font-size: 1.625rem;
     font-weight: 700;
     line-height: 1.25;
     margin: 0;
@@ -229,40 +229,44 @@
 
 /* Footer */
 .ons-footer {
-    background: var(--ons-grey-95);
+    background: var(--ons-white);
     border-top: 1px solid var(--ons-grey-15);
-    padding: 1.25rem 0 1.5rem;
+    padding: 1rem 0;
     margin-top: 2rem;
 }
 
-.ons-footer__nav {
-    margin-bottom: 0.75rem;
-}
-
-.ons-footer__list {
+.ons-footer .ons-container {
     display: flex;
-    flex-wrap: wrap;
-    gap: 1rem 1.5rem;
-    list-style: none;
-    margin: 0 0 0.85rem;
-    padding: 0;
+    align-items: center;
+    gap: 0.75rem;
 }
 
-.ons-footer__list a {
-    color: var(--ons-link);
+.ons-footer__logo-link {
+    display: inline-block;
+    color: var(--ons-black);
     text-decoration: none;
 }
 
-.ons-footer__list a:hover,
-.ons-footer__list a:focus {
-    color: var(--ons-link-hover);
-    text-decoration: underline;
+.ons-footer__logo-link:hover,
+.ons-footer__logo-link:focus {
+    color: var(--ons-black);
+    text-decoration: none;
 }
 
-.ons-footer__legal {
-    color: var(--ons-grey-75);
+.ons-icon--logo {
+    width: 250px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.ons-footer__logo-text {
     font-size: 0.9rem;
-    margin: 0;
+    font-weight: 400;
+    color: var(--ons-black);
+    white-space: nowrap;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
 }
 
 /* Header service navigation */

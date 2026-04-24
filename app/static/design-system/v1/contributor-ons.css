@@ -36,10 +36,10 @@
     /* Information panel body */
 
     /* Layout */
-    --ons-container-max-width: 64rem;
+    --ons-container-max-width: 1280px;
 }
 
-/* ONS container (64rem max-width for internal services) */
+/* ONS container (default 1032px max-width) */
 .ons-container {
     max-width: var(--ons-container-max-width);
     margin: 0 auto;
@@ -54,7 +54,8 @@
 }
 
 .ons-header__top {
-    background: #003c57; /* Dark blue - night */
+    background: #003c57;
+    /* Dark blue - night */
     padding: 0.5rem 0;
 }
 
@@ -106,7 +107,8 @@
 }
 
 .ons-header__main {
-    background: #206095; /* Ocean blue - lighter blue */
+    background: #206095;
+    /* Ocean blue - lighter blue */
     padding: 0.75rem 0;
 }
 
@@ -131,12 +133,10 @@
     color: var(--ons-white);
     text-decoration: underline;
 }
-    text-decoration: underline;
-}
 
 .ons-header__nav {
-    background: var(--ons-grey-95);
-    border-bottom: 1px solid var(--ons-grey-15);
+    background: var(--ons-blue-alt);
+    border-bottom: 1px solid var(--ons-blue-alt);
 }
 
 .ons-header__nav-list {
@@ -147,32 +147,36 @@
     margin: 0;
     padding: 0;
     width: 100%;
+    background: var(--ons-blue-alt);
 }
 
 .ons-header__nav-item {
     margin: 0;
+    background: var(--ons-blue-alt);
 }
 
 .ons-header__nav-link {
     display: block;
-    color: var(--ons-blue);
+    color: var(--ons-white);
     font-weight: 400;
     text-decoration: none;
     padding: 0.75rem 1rem;
     border-bottom: 3px solid transparent;
+    background: var(--ons-blue-alt);
 }
 
 .ons-header__nav-link:hover,
 .ons-header__nav-link:focus {
-    color: var(--ons-blue);
+    color: var(--ons-white);
     text-decoration: underline;
-    background: var(--ons-white);
+    background: var(--ons-blue-alt);
 }
 
 .ons-header__nav-link--active {
     font-weight: 700;
-    border-bottom-color: var(--ons-blue-alt);
-    background: var(--ons-white);
+    border-bottom-color: var(--ons-white);
+    background: var(--ons-blue-alt);
+    color: var(--ons-white);
 }
 
 .ons-header__sub-nav {
@@ -369,10 +373,15 @@
 }
 
 body {
-    font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-feature-settings: "ss01" 1;
+    font-family: "OpenSans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-feature-settings: "ss01";
     color: var(--ons-black);
     background: var(--ons-white);
+}
+
+:root {
+    --bs-font-sans-serif: "OpenSans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --bs-body-font-family: var(--bs-font-sans-serif);
 }
 
 button,

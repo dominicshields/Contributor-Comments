@@ -52,3 +52,11 @@
 2026-04-23 09:20:49.258 BST [21796] LOG:  checkpoint complete: wrote 0 buffers (0.0%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.007 s, sync=0.007 s, total=0.033 s; sync files=2, longest=0.006 s, average=0.004 s; distance=0 kB, estimate=0 kB; lsn=0/5722FF8, redo lsn=0/5722FA0
 2026-04-23 11:39:11.692 BST [21796] LOG:  checkpoint starting: time
 2026-04-23 11:39:13.018 BST [21796] LOG:  checkpoint complete: wrote 12 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.299 s, sync=0.003 s, total=1.327 s; sync files=13, longest=0.001 s, average=0.001 s; distance=43 kB, estimate=43 kB; lsn=0/572DD30, redo lsn=0/572DCD8
+2026-04-24 08:52:35.492 BST [11872] LOG:  starting PostgreSQL 18.3 on aarch64-apple-darwin20.0.0, compiled by clang version 20.1.8, 64-bit
+2026-04-24 08:52:35.494 BST [11872] LOG:  listening on IPv6 address "::1", port 5432
+2026-04-24 08:52:35.494 BST [11872] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-04-24 08:52:35.496 BST [11872] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2026-04-24 08:52:35.515 BST [11878] LOG:  database system was shut down at 2026-04-23 15:07:35 BST
+2026-04-24 08:52:35.526 BST [11872] LOG:  database system is ready to accept connections
+2026-04-24 08:57:35.515 BST [11876] LOG:  checkpoint starting: time
+2026-04-24 08:57:35.542 BST [11876] LOG:  checkpoint complete: wrote 0 buffers (0.0%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.004 s, sync=0.006 s, total=0.028 s; sync files=2, longest=0.004 s, average=0.003 s; distance=0 kB, estimate=0 kB; lsn=0/572DEE8, redo lsn=0/572DE90

@@ -1001,6 +1001,77 @@ def test_contact_management_search_and_show_all(client, login_analyst, app):
     assert b"RUREF 12345678902" in show_all_response.data
 
 
+def test_contact_management_search_by_name_or_email(client, login_analyst, app):
+    with app.app_context():
+        ru1 = db.session.get(ReportingUnit, "12345678911")
+        if ru1 is None:
+            ru1 = ReportingUnit(ruref="12345678911")
+            db.session.add(ru1)
+
+        ru2 = db.session.get(ReportingUnit, "12345678912")
+        if ru2 is None:
+            ru2 = ReportingUnit(ruref="12345678912")
+            db.session.add(ru2)
+
+        author = User.query.filter_by(username="analyst1").first()
+        assert author is not None
+
+        db.session.add_all(
+            [
+                Comment(
+                    ruref="12345678911",
+                    survey_code="221",
+                    period="202601",
+                    comment_text="Survey 221 comment for RU1",
+                    author_id=author.id,
+                ),
+                Comment(
+                    ruref="12345678912",
+                    survey_code="221",
+                    period="202601",
+                    comment_text="Survey 221 comment for RU2",
+                    author_id=author.id,
+                ),
+            ]
+        )
+
+        db.session.add_all(
+            [
+                Contact(
+                    ruref="12345678911",
+                    survey_code="221",
+                    name="Alice Example",
+                    telephone_number="02070000011",
+                    email_address="alice@example.com",
+                ),
+                Contact(
+                    ruref="12345678912",
+                    survey_code="221",
+                    name="Bob Example",
+                    telephone_number="02070000012",
+                    email_address="bob@example.com",
+                ),
+            ]
+        )
+        db.session.commit()
+
+    search_by_name_response = client.get(
+        "/contacts-management?contact_query=alice",
+        follow_redirects=True,
+    )
+    assert search_by_name_response.status_code == 200
+    assert b"Alice Example" in search_by_name_response.data
+    assert b"Bob Example" not in search_by_name_response.data
+
+    search_by_email_response = client.get(
+        "/contacts-management?contact_query=bob%40example.com",
+        follow_redirects=True,
+    )
+    assert search_by_email_response.status_code == 200
+    assert b"Bob Example" in search_by_email_response.data
+    assert b"Alice Example" not in search_by_email_response.data
+
+
 def test_contact_management_removes_orphan_contacts(client, login_analyst, app):
     with app.app_context():
         ru = db.session.get(ReportingUnit, "12345678903")

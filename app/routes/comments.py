@@ -707,20 +707,37 @@ def contact_management():
     ruref = normalize_reference(
         (request.args.get("ruref") or request.args.get("reference") or "").strip()
     )
+    contact_query = request.args.get("contact_query", "").strip()
     show_all_contacts = _query_flag("show_all_contacts", default=False)
-    search_performed = show_all_contacts or bool(ruref)
+    search_performed = show_all_contacts or bool(ruref or contact_query)
 
     contacts: list[Contact] = []
     if show_all_contacts:
         contacts = Contact.query.all()
-    elif ruref:
-        if is_valid_reference(ruref):
-            contacts = Contact.query.filter_by(ruref=ruref).all()
-        else:
-            flash(
-                "Reference must be an 11-digit RUREF or a valid NI Number.",
-                "error",
+    else:
+        contact_query_builder = Contact.query
+
+        if ruref:
+            if is_valid_reference(ruref):
+                contact_query_builder = contact_query_builder.filter(Contact.ruref == ruref)
+            else:
+                flash(
+                    "Reference must be an 11-digit RUREF or a valid NI Number.",
+                    "error",
+                )
+                contact_query_builder = contact_query_builder.filter(False)
+
+        if contact_query:
+            like_pattern = f"%{contact_query}%"
+            contact_query_builder = contact_query_builder.filter(
+                or_(
+                    Contact.name.ilike(like_pattern),
+                    Contact.email_address.ilike(like_pattern),
+                )
             )
+
+        if search_performed:
+            contacts = contact_query_builder.all()
 
     grouped_contacts: OrderedDict[str, list[Contact]] = OrderedDict()
     for contact in _sort_contacts_for_display(contacts):
@@ -729,6 +746,7 @@ def contact_management():
     return render_template(
         "comments/contact_management.html",
         ruref=ruref,
+        contact_query=contact_query,
         show_all_contacts=show_all_contacts,
         search_performed=search_performed,
         grouped_contacts=grouped_contacts,

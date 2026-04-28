@@ -4,7 +4,7 @@
 {% block content %}
 <header class="ons-page-header">
     <h1 class="ons-page-title">Contact Management</h1>
-    <p class="ons-page-lead">Search contacts by reference or show all contacts. Contacts are ordered by survey within each reference.</p>
+    <p class="ons-page-lead">Search contacts by reference, name, or email, or show all contacts. Contacts are ordered by survey within each reference.</p>
 </header>
 
 <div class="mb-4">
@@ -13,6 +13,10 @@
         <div class="col-md-4">
             <label class="form-label" for="ruref">Reference</label>
             <input class="form-control" type="text" id="ruref" name="ruref" value="{{ ruref }}" maxlength="20">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label" for="contact_query">Contact Name or Email</label>
+            <input class="form-control" type="text" id="contact_query" name="contact_query" value="{{ contact_query }}" maxlength="255">
         </div>
         <div class="col-12">
             <button class="btn btn-primary" type="submit">Run Search</button>

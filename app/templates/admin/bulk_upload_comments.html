@@ -54,6 +54,38 @@ document.addEventListener('DOMContentLoaded', function () {
     const startUrl = form.getAttribute('data-start-url');
     let pollTimer = null;
 
+    function formatDuration(seconds) {
+        if (typeof seconds !== 'number' || !isFinite(seconds) || seconds < 0) {
+            return '';
+        }
+
+        const roundedSeconds = Math.max(0, Math.round(seconds));
+        const minutes = Math.floor(roundedSeconds / 60);
+        const remainingSeconds = roundedSeconds % 60;
+
+        if (minutes > 0) {
+            return minutes + 'm ' + remainingSeconds + 's';
+        }
+
+        return remainingSeconds + 's';
+    }
+
+    function buildTimingText(job) {
+        const parts = [];
+        const elapsedText = formatDuration(job.elapsed_seconds);
+        const remainingText = formatDuration(job.estimated_remaining_seconds);
+
+        if (elapsedText) {
+            parts.push('Elapsed: ' + elapsedText + '.');
+        }
+
+        if (remainingText) {
+            parts.push('Estimated remaining: ' + remainingText + '.');
+        }
+
+        return parts.join(' ');
+    }
+
     function setProgress(percent, statusText, detailText, isComplete, hasError) {
         const safePercent = Math.max(0, Math.min(100, percent));
         progressPanel.hidden = false;
@@ -92,9 +124,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 const job = result.data;
-                const detailText = job.total_rows
+                const progressText = job.total_rows
                     ? 'Processed ' + job.processed_rows + ' of ' + job.total_rows + ' rows. Added: ' + job.created + '. Skipped: ' + job.skipped + '.'
                     : 'No rows found in the uploaded file.';
+                const timingText = buildTimingText(job);
+                const detailText = timingText ? progressText + ' ' + timingText : progressText;
 
                 if (job.status === 'completed') {
                     setProgress(100, 'Bulk upload complete.', job.message || detailText, true, false);

@@ -216,12 +216,25 @@ def _build_bulk_upload_summary(created: int, skipped: int, elapsed_seconds: floa
     )
 
 
+def _estimate_remaining_seconds(elapsed_seconds: float, processed_rows: int, total_rows: int) -> Optional[float]:
+    if elapsed_seconds <= 0 or processed_rows <= 0 or total_rows <= 0:
+        return None
+
+    remaining_rows = total_rows - processed_rows
+    if remaining_rows <= 0:
+        return 0.0
+
+    return (elapsed_seconds / processed_rows) * remaining_rows
+
+
 def _bulk_upload_job_snapshot(job_id: str) -> Optional[dict[str, object]]:
     with BULK_UPLOAD_JOBS_LOCK:
         job = BULK_UPLOAD_JOBS.get(job_id)
         if job is None:
             return None
-        return dict(job)
+        snapshot = dict(job)
+        snapshot.pop("started_at", None)
+        return snapshot
 
 
 def _update_bulk_upload_job(job_id: str, **fields: object) -> None:
@@ -230,6 +243,19 @@ def _update_bulk_upload_job(job_id: str, **fields: object) -> None:
         if job is None:
             return
         job.update(fields)
+
+
+def _bulk_upload_job_started_at(job_id: str) -> Optional[float]:
+    with BULK_UPLOAD_JOBS_LOCK:
+        job = BULK_UPLOAD_JOBS.get(job_id)
+        if job is None:
+            return None
+
+        started_at = job.get("started_at")
+        if isinstance(started_at, (int, float)):
+            return float(started_at)
+
+        return None
 
 
 def _process_bulk_upload_rows(
@@ -385,9 +411,11 @@ def _run_bulk_upload_job(app, job_id: str, rows: list[dict[str, str]], user_id: 
             if fallback_user is None:
                 raise RuntimeError("Upload user could not be found.")
 
-            _update_bulk_upload_job(job_id, status="running")
+            job_started_at = perf_counter()
+            _update_bulk_upload_job(job_id, status="running", started_at=job_started_at)
 
             def progress_callback(percent, processed_rows, total_rows, created, skipped):
+                elapsed_seconds = perf_counter() - job_started_at
                 _update_bulk_upload_job(
                     job_id,
                     progress_percent=percent,
@@ -395,6 +423,10 @@ def _run_bulk_upload_job(app, job_id: str, rows: list[dict[str, str]], user_id: 
                     total_rows=total_rows,
                     created=created,
                     skipped=skipped,
+                    elapsed_seconds=elapsed_seconds,
+                    estimated_remaining_seconds=_estimate_remaining_seconds(
+                        elapsed_seconds, processed_rows, total_rows
+                    ),
                     status="running",
                 )
 
@@ -408,13 +440,21 @@ def _run_bulk_upload_job(app, job_id: str, rows: list[dict[str, str]], user_id: 
                 created=result["created"],
                 skipped=result["skipped"],
                 elapsed_seconds=result["elapsed_seconds"],
+                estimated_remaining_seconds=0.0,
                 message=result["message"],
             )
         except Exception as exc:
             db.session.rollback()
+            started_at = _bulk_upload_job_started_at(job_id)
             _update_bulk_upload_job(
                 job_id,
                 status="failed",
+                elapsed_seconds=(
+                    max(0.0, perf_counter() - started_at)
+                    if isinstance(started_at, (int, float))
+                    else 0.0
+                ),
+                estimated_remaining_seconds=None,
                 message=f"Bulk upload failed: {exc}",
             )
         finally:
@@ -704,6 +744,7 @@ def bulk_upload_comments_start():
             "created": 0,
             "skipped": 0,
             "elapsed_seconds": 0.0,
+            "estimated_remaining_seconds": None,
             "message": "",
         }
 

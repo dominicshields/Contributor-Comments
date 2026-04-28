@@ -408,6 +408,9 @@ def test_bulk_upload_async_status_reports_completion(client, login_admin, app):
     assert status_payload["progress_percent"] == 100
     assert status_payload["created"] == 2
     assert status_payload["skipped"] == 0
+    assert status_payload["elapsed_seconds"] >= 0
+    assert status_payload["estimated_remaining_seconds"] == 0.0
+    assert "started_at" not in status_payload
 
     with app.app_context():
         assert Comment.query.filter(Comment.ruref.in_(["12345678921", "12345678922"])).count() == 2

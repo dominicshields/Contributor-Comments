@@ -4,12 +4,14 @@ import csv
 import io
 import re
 import secrets
+import threading
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
 from typing import Optional
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import case, distinct
 
@@ -31,6 +33,7 @@ from ..validation import (
     is_valid_survey_periodicity,
     normalize_reference,
 )
+from .comments import _cleanup_orphan_contacts, _orphan_contact_count
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -41,6 +44,9 @@ PERIODICITY_ALLOWED_MONTHS = {
     "Annual": {12},
     "Other": {12},
 }
+
+BULK_UPLOAD_JOBS: dict[str, dict[str, object]] = {}
+BULK_UPLOAD_JOBS_LOCK = threading.Lock()
 
 
 def _parse_forms_per_period(value: Optional[str]) -> int:
@@ -174,6 +180,285 @@ def _database_size_display() -> str:
 
 def _normalize_template_wording(value: str) -> str:
     return " ".join(value.split())
+
+
+def _read_bulk_upload_content() -> Optional[str]:
+    upload = request.files.get("comments_file")
+    if upload is None or not upload.filename:
+        flash("Please choose a CSV file to upload.", "error")
+        return None
+
+    try:
+        return upload.stream.read().decode("utf-8-sig")
+    except UnicodeDecodeError:
+        flash("Unable to read file. Please upload a UTF-8 encoded CSV.", "error")
+        return None
+
+
+def _parse_bulk_upload_rows(content: str) -> tuple[list[dict[str, str]], Optional[str]]:
+    reader = csv.DictReader(io.StringIO(content))
+    required_columns = {"ruref", "period", "comment_text"}
+    columns = {column.strip().lower() for column in (reader.fieldnames or [])}
+    if not required_columns.issubset(columns):
+        return [], "CSV must include columns: ruref, period, comment_text."
+
+    rows = [
+        {str(k).strip().lower(): (v or "").strip() for k, v in row.items()}
+        for row in reader
+    ]
+    return rows, None
+
+
+def _build_bulk_upload_summary(created: int, skipped: int, elapsed_seconds: float) -> str:
+    return (
+        f"Bulk upload complete. Added {created} comments in {elapsed_seconds:.2f} seconds. "
+        f"Skipped: {skipped}."
+    )
+
+
+def _estimate_remaining_seconds(elapsed_seconds: float, processed_rows: int, total_rows: int) -> Optional[float]:
+    if elapsed_seconds <= 0 or processed_rows <= 0 or total_rows <= 0:
+        return None
+
+    remaining_rows = total_rows - processed_rows
+    if remaining_rows <= 0:
+        return 0.0
+
+    return (elapsed_seconds / processed_rows) * remaining_rows
+
+
+def _bulk_upload_job_snapshot(job_id: str) -> Optional[dict[str, object]]:
+    with BULK_UPLOAD_JOBS_LOCK:
+        job = BULK_UPLOAD_JOBS.get(job_id)
+        if job is None:
+            return None
+        snapshot = dict(job)
+        snapshot.pop("started_at", None)
+        return snapshot
+
+
+def _update_bulk_upload_job(job_id: str, **fields: object) -> None:
+    with BULK_UPLOAD_JOBS_LOCK:
+        job = BULK_UPLOAD_JOBS.get(job_id)
+        if job is None:
+            return
+        job.update(fields)
+
+
+def _bulk_upload_job_started_at(job_id: str) -> Optional[float]:
+    with BULK_UPLOAD_JOBS_LOCK:
+        job = BULK_UPLOAD_JOBS.get(job_id)
+        if job is None:
+            return None
+
+        started_at = job.get("started_at")
+        if isinstance(started_at, (int, float)):
+            return float(started_at)
+
+        return None
+
+
+def _process_bulk_upload_rows(
+    rows: list[dict[str, str]],
+    fallback_user: User,
+    progress_callback=None,
+) -> dict[str, object]:
+    created = 0
+    skipped = 0
+    total_rows = len(rows)
+    started_at = perf_counter()
+    next_progress_percent = 10
+
+    for index, row_normalized in enumerate(rows, start=1):
+        ruref = normalize_reference(row_normalized.get("ruref", ""))
+        survey_code = row_normalized.get("survey_code", "")
+        period = row_normalized.get("period", "")
+        comment_text = row_normalized.get("comment_text", "")
+        author_name = row_normalized.get("author_name", "")
+        contact_name = row_normalized.get("contact_name", "")
+        contact_phone = row_normalized.get("contact_phone", "")
+        contact_email = row_normalized.get("contact_email", "")
+        is_general_raw = row_normalized.get("is_general", "")
+        is_general = is_general_raw.lower() in {"1", "true", "yes", "y"}
+        saved_at = _parse_saved_at(row_normalized.get("saved_at", ""))
+
+        if survey_code == "":
+            is_general = True
+
+        row_is_valid = True
+        survey = None
+
+        if not comment_text:
+            row_is_valid = False
+        elif not is_valid_period(period):
+            row_is_valid = False
+
+        if row_is_valid and not is_general:
+            survey = db.session.get(Survey, survey_code)
+            if survey is None or not survey.is_active:
+                row_is_valid = False
+            elif not _is_period_allowed_for_survey(survey, period):
+                row_is_valid = False
+
+        if row_is_valid and not is_valid_reference_for_survey(
+            ruref, survey_code if not is_general else None
+        ):
+            row_is_valid = False
+
+        if row_is_valid and is_general and survey_code == ASHE_SURVEY_CODE:
+            row_is_valid = False
+
+        if not row_is_valid:
+            skipped += 1
+        else:
+            reporting_unit = db.session.get(ReportingUnit, ruref)
+            if reporting_unit is None:
+                reporting_unit = ReportingUnit(ruref=ruref)
+                db.session.add(reporting_unit)
+
+            author = _resolve_author(author_name, fallback_user)
+
+            contact_scope = survey_code if not is_general else None
+            existing_contact_for_scope = Contact.query.filter_by(
+                ruref=ruref, survey_code=contact_scope
+            ).first()
+
+            comment = Comment(
+                ruref=ruref,
+                survey_code=survey_code if not is_general else None,
+                is_general=is_general,
+                period=period,
+                comment_text=comment_text,
+                contact_name_snapshot=(
+                    contact_name
+                    if (contact_name or contact_phone or contact_email)
+                    else (
+                        existing_contact_for_scope.name
+                        if existing_contact_for_scope is not None
+                        else ""
+                    )
+                ),
+                contact_phone_snapshot=(
+                    contact_phone
+                    if (contact_name or contact_phone or contact_email)
+                    else (
+                        existing_contact_for_scope.telephone_number
+                        if existing_contact_for_scope is not None
+                        else ""
+                    )
+                ),
+                contact_email_snapshot=(
+                    contact_email
+                    if (contact_name or contact_phone or contact_email)
+                    else (
+                        existing_contact_for_scope.email_address
+                        if existing_contact_for_scope is not None
+                        else ""
+                    )
+                ),
+                author_id=author.id,
+            )
+            if saved_at is not None:
+                comment.created_at = saved_at
+                comment.updated_at = saved_at
+
+            db.session.add(comment)
+
+            if contact_name or contact_phone or contact_email:
+                existing_contact = existing_contact_for_scope
+
+                if existing_contact is None:
+                    db.session.add(
+                        Contact(
+                            ruref=ruref,
+                            survey_code=contact_scope,
+                            name=contact_name,
+                            telephone_number=contact_phone,
+                            email_address=contact_email,
+                        )
+                    )
+                else:
+                    if contact_name:
+                        existing_contact.name = contact_name
+                    if contact_phone:
+                        existing_contact.telephone_number = contact_phone
+                    if contact_email:
+                        existing_contact.email_address = contact_email
+
+            created += 1
+
+        if progress_callback is not None and total_rows:
+            percent_complete = int((index / total_rows) * 100)
+            while percent_complete >= next_progress_percent and next_progress_percent <= 100:
+                progress_callback(next_progress_percent, index, total_rows, created, skipped)
+                next_progress_percent += 10
+
+    db.session.commit()
+    elapsed_seconds = perf_counter() - started_at
+    return {
+        "created": created,
+        "skipped": skipped,
+        "elapsed_seconds": elapsed_seconds,
+        "message": _build_bulk_upload_summary(created, skipped, elapsed_seconds),
+        "total_rows": total_rows,
+    }
+
+
+def _run_bulk_upload_job(app, job_id: str, rows: list[dict[str, str]], user_id: int) -> None:
+    with app.app_context():
+        try:
+            fallback_user = db.session.get(User, user_id)
+            if fallback_user is None:
+                raise RuntimeError("Upload user could not be found.")
+
+            job_started_at = perf_counter()
+            _update_bulk_upload_job(job_id, status="running", started_at=job_started_at)
+
+            def progress_callback(percent, processed_rows, total_rows, created, skipped):
+                elapsed_seconds = perf_counter() - job_started_at
+                _update_bulk_upload_job(
+                    job_id,
+                    progress_percent=percent,
+                    processed_rows=processed_rows,
+                    total_rows=total_rows,
+                    created=created,
+                    skipped=skipped,
+                    elapsed_seconds=elapsed_seconds,
+                    estimated_remaining_seconds=_estimate_remaining_seconds(
+                        elapsed_seconds, processed_rows, total_rows
+                    ),
+                    status="running",
+                )
+
+            result = _process_bulk_upload_rows(rows, fallback_user, progress_callback)
+            _update_bulk_upload_job(
+                job_id,
+                status="completed",
+                progress_percent=100,
+                processed_rows=result["total_rows"],
+                total_rows=result["total_rows"],
+                created=result["created"],
+                skipped=result["skipped"],
+                elapsed_seconds=result["elapsed_seconds"],
+                estimated_remaining_seconds=0.0,
+                message=result["message"],
+            )
+        except Exception as exc:
+            db.session.rollback()
+            started_at = _bulk_upload_job_started_at(job_id)
+            _update_bulk_upload_job(
+                job_id,
+                status="failed",
+                elapsed_seconds=(
+                    max(0.0, perf_counter() - started_at)
+                    if isinstance(started_at, (int, float))
+                    else 0.0
+                ),
+                estimated_remaining_seconds=None,
+                message=f"Bulk upload failed: {exc}",
+            )
+        finally:
+            db.session.remove()
 
 
 @bp.get("/surveys")
@@ -434,169 +719,88 @@ def bulk_upload_comments():
     return render_template("admin/bulk_upload_comments.html")
 
 
+@bp.post("/system-config/bulk-upload-comments/start")
+@login_required
+def bulk_upload_comments_start():
+    if not _ensure_admin():
+        return jsonify({"error": "Admin access required."}), 403
+
+    content = _read_bulk_upload_content()
+    if content is None:
+        return jsonify({"error": "Upload could not be read."}), 400
+
+    rows, error_message = _parse_bulk_upload_rows(content)
+    if error_message is not None:
+        return jsonify({"error": error_message}), 400
+
+    job_id = uuid.uuid4().hex
+    with BULK_UPLOAD_JOBS_LOCK:
+        BULK_UPLOAD_JOBS[job_id] = {
+            "job_id": job_id,
+            "status": "queued",
+            "progress_percent": 0,
+            "processed_rows": 0,
+            "total_rows": len(rows),
+            "created": 0,
+            "skipped": 0,
+            "elapsed_seconds": 0.0,
+            "estimated_remaining_seconds": None,
+            "message": "",
+        }
+
+    app = current_app._get_current_object()
+    if current_app.config.get("TESTING"):
+        _run_bulk_upload_job(app, job_id, rows, current_user.id)
+    else:
+        threading.Thread(
+            target=_run_bulk_upload_job,
+            args=(app, job_id, rows, current_user.id),
+            daemon=True,
+        ).start()
+
+    return (
+        jsonify(
+            {
+                "job_id": job_id,
+                "status": "queued",
+                "total_rows": len(rows),
+                "status_url": url_for("admin.bulk_upload_comments_status", job_id=job_id),
+            }
+        ),
+        202,
+    )
+
+
+@bp.get("/system-config/bulk-upload-comments/status/<job_id>")
+@login_required
+def bulk_upload_comments_status(job_id: str):
+    if not _ensure_admin():
+        return jsonify({"error": "Admin access required."}), 403
+
+    job = _bulk_upload_job_snapshot(job_id)
+    if job is None:
+        return jsonify({"error": "Bulk upload job not found."}), 404
+
+    return jsonify(job)
+
+
 @bp.post("/system-config/bulk-upload-comments")
 @login_required
 def bulk_upload_comments_submit():
     if not _ensure_admin():
         return redirect(url_for("comments.index"))
 
-    upload = request.files.get("comments_file")
-    if upload is None or not upload.filename:
-        flash("Please choose a CSV file to upload.", "error")
+    content = _read_bulk_upload_content()
+    if content is None:
         return redirect(url_for("admin.bulk_upload_comments"))
 
-    try:
-        content = upload.stream.read().decode("utf-8-sig")
-    except UnicodeDecodeError:
-        flash("Unable to read file. Please upload a UTF-8 encoded CSV.", "error")
+    rows, error_message = _parse_bulk_upload_rows(content)
+    if error_message is not None:
+        flash(error_message, "error")
         return redirect(url_for("admin.bulk_upload_comments"))
 
-    reader = csv.DictReader(io.StringIO(content))
-    required_columns = {"ruref", "period", "comment_text"}
-    columns = {column.strip().lower() for column in (reader.fieldnames or [])}
-    if not required_columns.issubset(columns):
-        flash(
-            "CSV must include columns: ruref, period, comment_text.",
-            "error",
-        )
-        return redirect(url_for("admin.bulk_upload_comments"))
-
-    created = 0
-    skipped = 0
-    started_at = perf_counter()
-
-    for row in reader:
-        row_normalized = {
-            str(k).strip().lower(): (v or "").strip() for k, v in row.items()
-        }
-
-        ruref = normalize_reference(row_normalized.get("ruref", ""))
-        survey_code = row_normalized.get("survey_code", "")
-        period = row_normalized.get("period", "")
-        comment_text = row_normalized.get("comment_text", "")
-        author_name = row_normalized.get("author_name", "")
-        contact_name = row_normalized.get("contact_name", "")
-        contact_phone = row_normalized.get("contact_phone", "")
-        contact_email = row_normalized.get("contact_email", "")
-        is_general_raw = row_normalized.get("is_general", "")
-        is_general = is_general_raw.lower() in {"1", "true", "yes", "y"}
-        saved_at = _parse_saved_at(row_normalized.get("saved_at", ""))
-
-        # Treat empty survey codes as general comments for easier CSV authoring.
-        if survey_code == "":
-            is_general = True
-
-        if not comment_text:
-            skipped += 1
-            continue
-
-        if not is_valid_period(period):
-            skipped += 1
-            continue
-
-        survey = None
-        if not is_general:
-            survey = db.session.get(Survey, survey_code)
-            if survey is None or not survey.is_active:
-                skipped += 1
-                continue
-
-            if not _is_period_allowed_for_survey(survey, period):
-                skipped += 1
-                continue
-
-        if not is_valid_reference_for_survey(
-            ruref, survey_code if not is_general else None
-        ):
-            skipped += 1
-            continue
-
-        if is_general and survey_code == ASHE_SURVEY_CODE:
-            skipped += 1
-            continue
-
-        reporting_unit = db.session.get(ReportingUnit, ruref)
-        if reporting_unit is None:
-            reporting_unit = ReportingUnit(ruref=ruref)
-            db.session.add(reporting_unit)
-
-        author = _resolve_author(author_name, current_user)
-
-        contact_scope = survey_code if not is_general else None
-        existing_contact_for_scope = Contact.query.filter_by(
-            ruref=ruref, survey_code=contact_scope
-        ).first()
-
-        comment = Comment(
-            ruref=ruref,
-            survey_code=survey_code if not is_general else None,
-            is_general=is_general,
-            period=period,
-            comment_text=comment_text,
-            contact_name_snapshot=(
-                contact_name
-                if (contact_name or contact_phone or contact_email)
-                else (
-                    existing_contact_for_scope.name
-                    if existing_contact_for_scope is not None
-                    else ""
-                )
-            ),
-            contact_phone_snapshot=(
-                contact_phone
-                if (contact_name or contact_phone or contact_email)
-                else (
-                    existing_contact_for_scope.telephone_number
-                    if existing_contact_for_scope is not None
-                    else ""
-                )
-            ),
-            contact_email_snapshot=(
-                contact_email
-                if (contact_name or contact_phone or contact_email)
-                else (
-                    existing_contact_for_scope.email_address
-                    if existing_contact_for_scope is not None
-                    else ""
-                )
-            ),
-            author_id=author.id,
-        )
-        if saved_at is not None:
-            comment.created_at = saved_at
-            comment.updated_at = saved_at
-
-        db.session.add(comment)
-
-        if contact_name or contact_phone or contact_email:
-            existing_contact = existing_contact_for_scope
-
-            if existing_contact is None:
-                db.session.add(
-                    Contact(
-                        ruref=ruref,
-                        survey_code=contact_scope,
-                        name=contact_name,
-                        telephone_number=contact_phone,
-                        email_address=contact_email,
-                    )
-                )
-            else:
-                if contact_name:
-                    existing_contact.name = contact_name
-                if contact_phone:
-                    existing_contact.telephone_number = contact_phone
-                if contact_email:
-                    existing_contact.email_address = contact_email
-
-        created += 1
-
-    db.session.commit()
-    elapsed_seconds = perf_counter() - started_at
-    flash(
-        f"Bulk upload complete. Added {created} comments in {elapsed_seconds:.2f} seconds. Skipped: {skipped}.",
-        "success",
-    )
+    result = _process_bulk_upload_rows(rows, current_user)
+    flash(result["message"], "success")
     return redirect(url_for("admin.bulk_upload_comments"))
 
 
@@ -787,6 +991,32 @@ def delete_all_comments_page():
     return render_template(
         "admin/delete_all_comments.html", comment_count=comment_count
     )
+
+
+@bp.get("/system-config/orphan-contacts")
+@login_required
+def orphan_contacts_page():
+    if not _ensure_admin():
+        return redirect(url_for("comments.index"))
+
+    return render_template(
+        "admin/orphan_contacts.html",
+        orphan_contact_count=_orphan_contact_count(),
+    )
+
+
+@bp.post("/system-config/orphan-contacts")
+@login_required
+def orphan_contacts_submit():
+    if not _ensure_admin():
+        return redirect(url_for("comments.index"))
+
+    deleted_contacts = _cleanup_orphan_contacts()
+    flash(
+        f"Orphan contact cleanup complete. Removed {deleted_contacts} orphan contacts.",
+        "success",
+    )
+    return redirect(url_for("admin.orphan_contacts_page"))
 
 
 @bp.post("/system-config/delete-all-comments")

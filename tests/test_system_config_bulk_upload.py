@@ -65,10 +65,25 @@ def test_available_templates_page_requires_admin(client, login_analyst):
     assert b"Admin access required" in response.data
 
 
+def test_orphan_contacts_page_requires_admin(client, login_analyst):
+    response = client.get(
+        "/admin/system-config/orphan-contacts", follow_redirects=True
+    )
+    assert response.status_code == 200
+    assert b"Admin access required" in response.data
+
+
 def test_admin_can_view_available_templates_page(client, login_admin):
     response = client.get("/admin/system-config/templates", follow_redirects=True)
     assert response.status_code == 200
     assert b"Available Templates" in response.data
+
+
+def test_admin_can_view_orphan_contacts_page(client, login_admin):
+    response = client.get("/admin/system-config/orphan-contacts", follow_redirects=True)
+    assert response.status_code == 200
+    assert b"Cleanup orphan contacts" in response.data
+    assert b"Current orphan contacts" in response.data
 
 
 def test_admin_can_add_available_template(client, login_admin, app):
@@ -364,6 +379,43 @@ def test_bulk_upload_comments_upserts_contact_without_duplicate_scope(
         assert contacts[0].email_address == "updated@example.com"
 
 
+def test_bulk_upload_async_status_reports_completion(client, login_admin, app):
+    csv_text = "\n".join(
+        [
+            "ruref,survey_code,period,comment_text,author_name",
+            "12345678921,221,202312,Async row one,Analyst Bulk",
+            "12345678922,221,202312,Async row two,Analyst Bulk",
+        ]
+    )
+
+    start_response = client.post(
+        "/admin/system-config/bulk-upload-comments/start",
+        data={"comments_file": (io.BytesIO(csv_text.encode("utf-8")), "upload.csv")},
+        content_type="multipart/form-data",
+    )
+
+    assert start_response.status_code == 202
+    start_payload = start_response.get_json()
+    assert start_payload is not None
+    assert start_payload["total_rows"] == 2
+    assert "job_id" in start_payload
+
+    status_response = client.get(start_payload["status_url"])
+    assert status_response.status_code == 200
+    status_payload = status_response.get_json()
+    assert status_payload is not None
+    assert status_payload["status"] == "completed"
+    assert status_payload["progress_percent"] == 100
+    assert status_payload["created"] == 2
+    assert status_payload["skipped"] == 0
+    assert status_payload["elapsed_seconds"] >= 0
+    assert status_payload["estimated_remaining_seconds"] == 0.0
+    assert "started_at" not in status_payload
+
+    with app.app_context():
+        assert Comment.query.filter(Comment.ruref.in_(["12345678921", "12345678922"])).count() == 2
+
+
 def test_delete_all_comments_removes_comments_and_edit_history(
     client, login_admin, app
 ):
@@ -428,6 +480,70 @@ def test_delete_all_comments_removes_comments_and_edit_history(
         assert Comment.query.count() == 0
         assert CommentEdit.query.count() == 0
         assert Contact.query.count() == 0
+
+
+def test_orphan_contact_cleanup_removes_only_orphan_contacts(client, login_admin, app):
+    with app.app_context():
+        author = User.query.filter_by(username="analyst1").first()
+        assert author is not None
+
+        kept_ruref = "55555555551"
+        orphan_ruref = "55555555552"
+
+        for ruref in (kept_ruref, orphan_ruref):
+            reporting_unit = db.session.get(ReportingUnit, ruref)
+            if reporting_unit is None:
+                db.session.add(ReportingUnit(ruref=ruref))
+
+        db.session.add(
+            Comment(
+                ruref=kept_ruref,
+                survey_code="221",
+                period="202401",
+                comment_text="Kept comment",
+                author_id=author.id,
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+        )
+        db.session.add_all(
+            [
+                Contact(
+                    ruref=kept_ruref,
+                    survey_code="221",
+                    name="Kept Contact",
+                    telephone_number="07000000001",
+                    email_address="kept@example.com",
+                ),
+                Contact(
+                    ruref=orphan_ruref,
+                    survey_code="221",
+                    name="Orphan Contact",
+                    telephone_number="07000000002",
+                    email_address="orphan@example.com",
+                ),
+            ]
+        )
+        db.session.commit()
+
+    page_response = client.get(
+        "/admin/system-config/orphan-contacts", follow_redirects=True
+    )
+    assert page_response.status_code == 200
+    assert b"Current orphan contacts" in page_response.data
+    assert b"Cleanup orphan contacts" in page_response.data
+
+    response = client.post(
+        "/admin/system-config/orphan-contacts", follow_redirects=True
+    )
+    assert response.status_code == 200
+    assert b"Orphan contact cleanup complete. Removed 1 orphan contacts." in response.data
+
+    with app.app_context():
+        kept_contact = Contact.query.filter_by(ruref=kept_ruref, survey_code="221").first()
+        orphan_contact = Contact.query.filter_by(ruref=orphan_ruref, survey_code="221").first()
+        assert kept_contact is not None
+        assert orphan_contact is None
 
 
 def test_system_info_page_displays_comment_counts(client, login_admin, app):

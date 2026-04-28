@@ -316,11 +316,35 @@ def _contact_has_matching_comment(contact: Contact) -> bool:
     )
 
 
+def _orphan_contact_id_query():
+    general_comment_exists = (
+        db.session.query(Comment.id)
+        .filter(Comment.ruref == Contact.ruref, Comment.is_general.is_(True))
+        .exists()
+    )
+    scoped_comment_exists = (
+        db.session.query(Comment.id)
+        .filter(Comment.ruref == Contact.ruref, Comment.survey_code == Contact.survey_code)
+        .exists()
+    )
+
+    return db.session.query(Contact.id).filter(
+        or_(
+            db.and_(Contact.survey_code.is_(None), ~general_comment_exists),
+            db.and_(Contact.survey_code.is_not(None), ~scoped_comment_exists),
+        )
+    )
+
+
+def _orphan_contact_count() -> int:
+    return _orphan_contact_id_query().count()
+
+
 def _cleanup_orphan_contacts() -> int:
-    orphan_ids: list[int] = []
-    for contact in Contact.query.all():
-        if not _contact_has_matching_comment(contact):
-            orphan_ids.append(contact.id)
+    orphan_ids = [
+        contact_id
+        for (contact_id,) in _orphan_contact_id_query().all()
+    ]
 
     if not orphan_ids:
         return 0
@@ -697,56 +721,64 @@ def comments_by_date():
 @bp.get("/contacts-management")
 @login_required
 def contact_management():
-    deleted_orphans = _cleanup_orphan_contacts()
-    if deleted_orphans:
-        flash(
-            f"Removed {deleted_orphans} orphan contacts with no matching comments.",
-            "info",
-        )
-
     ruref = normalize_reference(
         (request.args.get("ruref") or request.args.get("reference") or "").strip()
     )
     contact_query = request.args.get("contact_query", "").strip()
+    page = request.args.get("page", default=1, type=int)
+    per_page = 50
     show_all_contacts = _query_flag("show_all_contacts", default=False)
     search_performed = show_all_contacts or bool(ruref or contact_query)
 
-    contacts: list[Contact] = []
-    if show_all_contacts:
-        contacts = Contact.query.all()
-    else:
-        contact_query_builder = Contact.query
+    contact_query_builder = Contact.query.outerjoin(
+        Survey, Contact.survey_code == Survey.code
+    )
+    pagination = None
 
-        if ruref:
-            if is_valid_reference(ruref):
-                contact_query_builder = contact_query_builder.filter(Contact.ruref == ruref)
-            else:
-                flash(
-                    "Reference must be an 11-digit RUREF or a valid NI Number.",
-                    "error",
-                )
-                contact_query_builder = contact_query_builder.filter(False)
-
-        if contact_query:
-            like_pattern = f"%{contact_query}%"
-            contact_query_builder = contact_query_builder.filter(
-                or_(
-                    Contact.name.ilike(like_pattern),
-                    Contact.email_address.ilike(like_pattern),
-                )
+    if ruref:
+        if is_valid_reference(ruref):
+            contact_query_builder = contact_query_builder.filter(Contact.ruref == ruref)
+        else:
+            flash(
+                "Reference must be an 11-digit RUREF or a valid NI Number.",
+                "error",
             )
+            contact_query_builder = contact_query_builder.filter(False)
 
-        if search_performed:
-            contacts = contact_query_builder.all()
+    if contact_query:
+        like_pattern = f"%{contact_query}%"
+        contact_query_builder = contact_query_builder.filter(
+            or_(
+                Contact.name.ilike(like_pattern),
+                Contact.email_address.ilike(like_pattern),
+            )
+        )
+
+    contacts: list[Contact] = []
+    if search_performed:
+        contact_query_builder = contact_query_builder.order_by(
+            Contact.ruref.asc(),
+            db.case((Contact.survey_code.is_(None), 0), else_=1).asc(),
+            Survey.display_order.asc(),
+            Contact.survey_code.asc(),
+            Contact.id.asc(),
+        )
+        pagination = contact_query_builder.paginate(
+            page=page,
+            per_page=per_page,
+            error_out=False,
+        )
+        contacts = pagination.items
 
     grouped_contacts: OrderedDict[str, list[Contact]] = OrderedDict()
-    for contact in _sort_contacts_for_display(contacts):
+    for contact in contacts:
         grouped_contacts.setdefault(contact.ruref, []).append(contact)
 
     return render_template(
         "comments/contact_management.html",
         ruref=ruref,
         contact_query=contact_query,
+        pagination=pagination,
         show_all_contacts=show_all_contacts,
         search_performed=search_performed,
         grouped_contacts=grouped_contacts,

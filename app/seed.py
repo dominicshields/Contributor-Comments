@@ -4,22 +4,61 @@ from .extensions import db
 from .models import CommentTemplate, Survey, User
 from .validation import is_valid_survey_periodicity
 
-
-DEFAULT_SURVEYS = ["221", "241", "002", "023", "138"]
+DEFAULT_SURVEYS = ["221", "241", "002", "023", "138", "141"]
 
 DEFAULT_SURVEY_METADATA = {
-    "221": {"description": "Survey 221", "periodicity": "Monthly", "forms_per_period": 0},
-    "241": {"description": "Survey 241", "periodicity": "Monthly", "forms_per_period": 0},
-    "002": {"description": "Survey 002", "periodicity": "Monthly", "forms_per_period": 0},
-    "023": {"description": "Survey 023", "periodicity": "Monthly", "forms_per_period": 0},
-    "138": {"description": "Survey 138", "periodicity": "Monthly", "forms_per_period": 0},
+    "221": {
+        "description": "Survey 221",
+        "periodicity": "Monthly",
+        "forms_per_period": 0,
+    },
+    "241": {
+        "description": "Survey 241",
+        "periodicity": "Monthly",
+        "forms_per_period": 0,
+    },
+    "002": {
+        "description": "Survey 002",
+        "periodicity": "Monthly",
+        "forms_per_period": 0,
+    },
+    "023": {
+        "description": "Survey 023",
+        "periodicity": "Monthly",
+        "forms_per_period": 0,
+    },
+    "138": {
+        "description": "Survey 138",
+        "periodicity": "Monthly",
+        "forms_per_period": 0,
+    },
+    "141": {
+        "description": "Survey 141",
+        "periodicity": "Annual",
+        "forms_per_period": 0,
+    },
 }
 
 
 TEST_USERS = [
-    {"username": "admin", "full_name": "Admin User", "password": "Password123!", "is_admin": True},
-    {"username": "analyst1", "full_name": "Analyst One", "password": "Password123!", "is_admin": False},
-    {"username": "analyst2", "full_name": "Analyst Two", "password": "Password123!", "is_admin": False},
+    {
+        "username": "admin",
+        "full_name": "Admin User",
+        "password": "Password123!",
+        "is_admin": True,
+    },
+    {
+        "username": "analyst1",
+        "full_name": "Analyst One",
+        "password": "Password123!",
+        "is_admin": False,
+    },
+    {
+        "username": "analyst2",
+        "full_name": "Analyst Two",
+        "password": "Password123!",
+        "is_admin": False,
+    },
 ]
 
 DEFAULT_COMMENT_TEMPLATES = [
@@ -58,7 +97,9 @@ def seed_reference_data() -> None:
             existing.is_active = True
         if not existing.description:
             existing.description = survey_metadata["description"]
-        if not existing.periodicity or not is_valid_survey_periodicity(existing.periodicity):
+        if not existing.periodicity or not is_valid_survey_periodicity(
+            existing.periodicity
+        ):
             # Keep seeded periodicity values within the allowed set.
             existing.periodicity = survey_metadata["periodicity"]
 
@@ -76,15 +117,16 @@ def seed_reference_data() -> None:
         db.session.add(user)
 
     existing_templates = {
-        (template.wording or "").strip()
-        for template in CommentTemplate.query.all()
+        (template.wording or "").strip() for template in CommentTemplate.query.all()
     }
     for wording in DEFAULT_COMMENT_TEMPLATES:
         normalized = wording.strip()
         if normalized in existing_templates:
             continue
 
-        max_order = db.session.query(db.func.max(CommentTemplate.display_order)).scalar() or 0
+        max_order = (
+            db.session.query(db.func.max(CommentTemplate.display_order)).scalar() or 0
+        )
         db.session.add(
             CommentTemplate(
                 wording=normalized,

@@ -16,7 +16,9 @@ Contributor Comments is a Flask + Jinja application for capturing and searching 
 ## Data Model
 
 - `reporting_units`
-	- `ruref` (11 numeric chars, PK)
+	- `ruref` (generic reference key, PK)
+	- For most surveys this is an 11-digit numeric RUREF
+	- For survey `141` this is a normalized NI number
 - `surveys`
 	- `code` (3 chars, PK)
 	- `display_order`
@@ -146,28 +148,34 @@ erDiagram
 
 - Authentication defaults to SSO (`AUTH_MODE=sso`) with role checks retained in the `users` table
 - SSO users are provisioned on first login (non-admin by default) and then controlled via local granular access
-- RUREF validation: exactly 11 numeric characters
+- Reference validation is survey-aware:
+	- Non-ASHE surveys: exactly 11 numeric characters
+	- Survey `141`: NI number in the format `AA999914A`
+	- NI numbers are normalized to uppercase with spaces removed before saving/searching
+- NI numbers are valid only for survey `141`
+- General comments cannot use NI numbers
 - Period validation: strict `YYYYMM` with valid month
 - Search supports:
-	- Direct RUREF lookup
+	- Direct reference lookup
 	- Survey filter (single or multiple)
 	- Full-text contains search across comment text, key identifiers, and comment author name/username
 - Main page uses separate sections for `Search` and `Add Comment`
+- When survey `141` is selected in Add Comment, the reference label changes to `NI Number`
 - Search text matches are highlighted in the comment text shown in results
-- Search tab includes `Show Comments (Testing)` to load the lowest 10 RUREFs with comments, grouped in the usual survey order
+- Search tab includes `Show Comments (Testing)` to load the lowest 10 references with comments, grouped in the usual survey order
 - Search results are shown only after a search is performed
-- RUREF detail page groups comments by survey in configured survey order, with descending period order
+- Reference detail page groups comments by survey in configured survey order, with descending period order
 - Top-level `Comments` menu includes:
 	- `Comments by Author`
 		- Case-insensitive author filter (full name or username)
-		- Grouped by author, then RUREF, then survey (`General` first, then survey display order)
+		- Grouped by author, then reference, then survey (`General` first, then survey display order)
 		- Subtle heading counts shown as `Author Name (N)`
 		- `Collapse all` / `Expand all` controls
 		- Pagination at 50 authors per page
 	- `Comments by Date`
 		- Initial page shows a collapsed year/month index with subtle counts (all years visible)
 		- Month links open a detail view for the selected month
-		- Month detail view groups by RUREF, then survey (`General` first, then survey display order)
+		- Month detail view groups by reference, then survey (`General` first, then survey display order)
 		- Month detail results are paginated at 50 comments per page
 		- `Collapse all` / `Expand all` controls apply to the year index view
 - General comments are supported and appear before survey-specific comments in grouped results
@@ -179,9 +187,9 @@ erDiagram
 - Contact details render in compact read-only mode when `Show Contact Information` is `Yes` and a contact name is present
 - When a contact is shown, the UI displays Name, Telephone, and Email; missing telephone/email values are shown as `Not provided`
 - Top-level `Contact Management` page supports:
-	- RUREF-filtered contact search
+	- Reference-filtered contact search
 	- Show all contacts
-	- Full contact details shown within each RUREF and ordered by survey (General first)
+	- Full contact details shown within each reference and ordered by survey (General first)
 	- Edit links for each contact
 - Add Comment contact behavior:
 	- When RUREF and survey scope are entered, existing contact details for that scope are pre-filled automatically
@@ -198,6 +206,10 @@ erDiagram
 - Contact and author display labels are explicit in comment results:
 	- `Author: <name>`
 	- `Contact: Name, Telephone, Email`
+- Reference handling is now generic:
+	- Most surveys still use numeric RUREFs
+	- Survey `141` uses NI numbers only
+	- UI labels switch between `RUREF` and `NI Number` based on the stored/selected reference type
 - Add Comment now auto-prefills contact details when an existing scoped contact is found.
 - `Check for Contact` has been removed from Add Comment because prefill is automatic.
 - If prefilled contact details are changed in Add Comment, save confirmation states: `Comment saved. Contact details amended.`
@@ -247,7 +259,10 @@ CSV columns:
 
 Import rules:
 
-- `ruref` must be exactly 11 numeric characters.
+- `ruref` accepts either:
+	- an 11-digit numeric RUREF for non-ASHE surveys
+	- a valid NI number for survey `141`
+- NI numbers are normalized to uppercase before import.
 - `period` must be valid `YYYYMM`.
 - Survey-specific rows require `survey_code` to exist and be active in Survey Metadata.
 - Survey-specific rows must match survey periodicity rules:
@@ -258,6 +273,7 @@ Import rules:
 	- Exception: survey `141` requires month `04`
 - General comment rows can be supplied either by leaving `survey_code` blank or by setting `is_general` to a truthy value (`1`, `true`, `yes`, `y`).
 - General comment rows are imported with no survey code and are not checked against survey periodicity metadata.
+- NI numbers are not allowed on general comment rows.
 - Missing reporting units are created automatically.
 - If `author_name` is provided, the importer reuses or creates a user record for that name.
 - Rows failing validation are skipped.
@@ -315,7 +331,7 @@ Import rules:
 Local and dev startup runs:
 
 - `db.create_all()`
-- Survey seed list: `221`, `241`, `002`, `023`, `138`
+- Survey seed list: `221`, `241`, `002`, `023`, `138`, `141`
 - Test users:
 	- `admin` / `Password123!`
 	- `analyst1` / `Password123!`
@@ -559,6 +575,10 @@ pytest
 - If you see `ModuleNotFoundError: No module named 'alembic'` when starting the app, install dependencies for the environment you're using:
 	- `.venv`: `uv pip install -r requirements.txt`
 	- conda: `pip install -r requirements.txt`
+- If an ASHE comment fails validation:
+	- Ensure survey `141` is selected.
+	- Use an NI number in the format `AA999914A`.
+	- The period month must be `04`.
 - If contact details are not appearing in search/results views:
 	- Ensure `Show Contact Information` is set to `Yes`.
 	- Contact blocks are shown when contact name is present; telephone/email may display as `Not provided` if those fields are blank.

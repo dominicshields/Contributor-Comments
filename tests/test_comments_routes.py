@@ -68,6 +68,84 @@ def test_create_comment_accepts_period_matching_survey_periodicity(
     assert b"Comment saved." in response.data
 
 
+def test_create_comment_accepts_ni_number_for_ashe_and_normalizes(
+    client, login_admin, app
+):
+    response = client.post(
+        "/comments/new",
+        data={
+            "ruref": "ab 123414 c",
+            "survey": "141",
+            "period": "202604",
+            "comment": "ASHE NI comment",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Comment saved." in response.data
+    assert b"NI Number AB123414C" in response.data
+
+    with app.app_context():
+        comment = Comment.query.filter_by(survey_code="141").first()
+        assert comment is not None
+        assert comment.ruref == "AB123414C"
+
+
+def test_create_comment_rejects_ni_number_for_general_comment(client, login_admin, app):
+    response = client.post(
+        "/comments/new",
+        data={
+            "ruref": "AB123414C",
+            "is_general": "1",
+            "period": "202604",
+            "comment": "Should fail",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"NI Numbers can only be used for survey 141 comments." in response.data
+
+    with app.app_context():
+        assert Comment.query.filter_by(ruref="AB123414C").count() == 0
+
+
+def test_invalid_ashe_reference_returns_to_add_tab_with_values_preserved(
+    client, login_admin
+):
+    response = client.post(
+        "/comments/new",
+        data={
+            "ruref": "AB123456C",
+            "survey": "141",
+            "period": "202604",
+            "comment": "Invalid NI draft",
+            "contact_name": "Draft Contact",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert (
+        b'class="ons-section-nav__link is-active" href="/comments?tab=add'
+        in response.data
+    )
+    assert b"NI Number must be two letters, six digits ending in" in response.data
+    assert b'value="AB123456C"' in response.data
+    assert b'<option value="141" selected>' in response.data
+    assert b"Invalid NI draft" in response.data
+    assert b"Draft Contact" in response.data
+
+
+def test_add_comment_page_contains_ni_number_auto_select_script(client, login_analyst):
+    response = client.get("/comments?tab=add", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"function maybePopulateAsheSurveyFromReference()" in response.data
+    assert b"surveySelect.value = '141';" in response.data
+
+
 def test_create_and_search_comment_by_ruref(client, login_analyst, app):
     client.post(
         "/comments/new",

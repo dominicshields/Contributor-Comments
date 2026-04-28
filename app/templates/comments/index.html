@@ -15,7 +15,7 @@
 {% block content %}
 <header class="ons-page-header">
     <h1 class="ons-page-title">Search and Add</h1>
-    <p class="ons-page-lead">Search comments by RU reference, survey, and text. Add new comments below.</p>
+    <p class="ons-page-lead">Search comments by reference, survey, and text. Add new comments below.</p>
 </header>
 
 <nav class="ons-section-nav" aria-label="Search and Add sections">
@@ -34,8 +34,8 @@
             <h2 class="ons-section-title">Search</h2>
             <form class="row g-3" method="get" action="{{ url_for('comments.index') }}">
                 <div class="col-md-4">
-                    <label class="form-label" for="ruref">RUREF (11 digits)</label>
-                    <input class="form-control" type="text" id="ruref" name="ruref" value="{{ ruref }}" maxlength="11">
+                    <label class="form-label" for="ruref">{{ search_reference_label }}</label>
+                    <input class="form-control" type="text" id="ruref" name="ruref" value="{{ ruref }}" maxlength="20">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label" for="q">Full Text Search</label>
@@ -110,7 +110,7 @@
                     {% for result_ruref, grouped_comments in ruref_groups.items() %}
                     <section class="ons-results-group">
                         <h3 class="ons-results-heading">
-                            <a href="{{ url_for('comments.ruref_detail', ruref=result_ruref, show_contacts='1' if show_contacts else '0') }}">RUREF {{ result_ruref }}</a>
+                            <a href="{{ url_for('comments.ruref_detail', ruref=result_ruref, show_contacts='1' if show_contacts else '0') }}">{{ reference_label_for_value(result_ruref) }} {{ result_ruref }}</a>
                         </h3>
                         {% for survey_code, survey_comments in grouped_comments.items() %}
                         <section class="ons-results-subsection">
@@ -156,7 +156,7 @@
                         <thead>
                             <tr>
                                 <th>Period</th>
-                                <th>RUREF</th>
+                                <th>Reference</th>
                                 <th>Comment</th>
                                 <th>Author</th>
                             </tr>
@@ -213,8 +213,8 @@
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label" for="new-ruref">RUREF</label>
-                        <input class="form-control" type="text" id="new-ruref" name="ruref" value="{{ add_ruref }}" maxlength="11" required>
+                        <label class="form-label" for="new-ruref" data-reference-label>Reference</label>
+                        <input class="form-control" type="text" id="new-ruref" name="ruref" value="{{ add_ruref }}" maxlength="20" required>
                     </div>
                     <div class="col-md-4" data-survey-input-wrap>
                         <label class="form-label" for="new-survey">Survey</label>
@@ -260,7 +260,7 @@
                     <div class="col-12">
                         <div>
                             <h3 class="h6 mb-2">Contact (optional)</h3>
-                            <p class="text-muted small mb-0">If a contact already exists for this RUREF and survey, details are pre-filled. Any updates you make here will be saved with the comment.</p>
+                            <p class="text-muted small mb-0">If a contact already exists for this reference and survey, details are pre-filled. Any updates you make here will be saved with the comment.</p>
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -353,6 +353,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const surveyInputWrap = document.querySelector('[data-survey-input-wrap]');
     const surveySelect = document.getElementById('new-survey');
     const addRurefInput = document.getElementById('new-ruref');
+    const referenceLabel = document.querySelector('[data-reference-label]');
+    const searchReferenceInput = document.getElementById('ruref');
+    const searchReferenceLabel = document.querySelector('label[for="ruref"]');
     const contactNameInput = document.getElementById('contact-name');
     const contactPhoneInput = document.getElementById('contact-phone');
     const contactEmailInput = document.getElementById('contact-email');
@@ -363,6 +366,62 @@ document.addEventListener('DOMContentLoaded', function () {
     const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
     const templateModalEl = document.getElementById('comment-template-modal');
     const templateFilterInput = document.querySelector('[data-template-filter]');
+
+    function isAsheSurveySelected() {
+        return Boolean(surveySelect && surveySelect.value.trim() === '141');
+    }
+
+    function isPotentialNiNumber(value) {
+        return /^[A-Za-z]{2}\d{6}[A-Za-z]$/.test((value || '').replace(/\s+/g, ''));
+    }
+
+    function maybePopulateAsheSurveyFromReference() {
+        if (!addRurefInput || !surveySelect) {
+            return;
+        }
+
+        const normalizedReference = addRurefInput.value.replace(/\s+/g, '').toUpperCase();
+        if (!isPotentialNiNumber(normalizedReference)) {
+            return;
+        }
+
+        if (generalToggle && generalToggle.checked) {
+            generalToggle.checked = false;
+            syncGeneralToggleState();
+        }
+
+        surveySelect.value = '141';
+    }
+
+    function updateReferenceUi() {
+        const isAshe = isAsheSurveySelected();
+
+        if (referenceLabel) {
+            referenceLabel.textContent = isAshe ? 'NI Number' : 'Reference';
+        }
+
+        if (addRurefInput) {
+            addRurefInput.maxLength = isAshe ? 9 : 20;
+            addRurefInput.placeholder = isAshe ? 'AB123414C' : '';
+        }
+
+        if (generalToggle && surveySelect) {
+            generalToggle.disabled = isAshe;
+            if (isAshe && generalToggle.checked) {
+                generalToggle.checked = false;
+                syncGeneralToggleState();
+            }
+        }
+
+        if (searchReferenceInput && searchReferenceLabel) {
+            const checkedSurveys = Array.from(document.querySelectorAll('input[name="surveys"]:checked')).map(function (checkbox) {
+                return checkbox.value;
+            });
+            const searchIsAsheOnly = checkedSurveys.length === 1 && checkedSurveys[0] === '141';
+            searchReferenceLabel.textContent = searchIsAsheOnly ? 'NI Number' : 'Reference';
+            searchReferenceInput.maxLength = searchIsAsheOnly ? 9 : 20;
+        }
+    }
 
     function applyCommentSpellcheck(enabled) {
         if (!commentTextarea) {
@@ -444,7 +503,20 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const ruref = addRurefInput.value.trim();
-        if (!/^\d{11}$/.test(ruref)) {
+        const normalizedReference = ruref.replace(/\s+/g, '');
+        if (isAsheSurveySelected()) {
+            if (!isPotentialNiNumber(normalizedReference)) {
+                return false;
+            }
+        } else if (generalToggle && generalToggle.checked) {
+            if (!/^\d{11}$/.test(normalizedReference)) {
+                return false;
+            }
+        } else if (surveySelect && surveySelect.value.trim()) {
+            if (!/^\d{11}$/.test(normalizedReference)) {
+                return false;
+            }
+        } else {
             return false;
         }
 
@@ -504,14 +576,31 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (addRurefInput) {
         addRurefInput.addEventListener('blur', requestContactPrefill);
+        addRurefInput.addEventListener('input', function () {
+            addRurefInput.value = addRurefInput.value.toUpperCase();
+            maybePopulateAsheSurveyFromReference();
+            updateReferenceUi();
+        });
     }
     if (surveySelect) {
-        surveySelect.addEventListener('change', requestContactPrefill);
+        surveySelect.addEventListener('change', function () {
+            updateReferenceUi();
+            requestContactPrefill();
+        });
     }
     if (generalToggle) {
-        generalToggle.addEventListener('change', requestContactPrefill);
+        generalToggle.addEventListener('change', function () {
+            updateReferenceUi();
+            requestContactPrefill();
+        });
     }
 
+    document.querySelectorAll('input[name="surveys"]').forEach(function (checkbox) {
+        checkbox.addEventListener('change', updateReferenceUi);
+    });
+
+    maybePopulateAsheSurveyFromReference();
+    updateReferenceUi();
     requestContactPrefill();
 
     document.querySelectorAll('[data-template-insert]').forEach(function (button) {

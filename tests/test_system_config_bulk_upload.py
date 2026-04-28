@@ -4,7 +4,15 @@ import io
 from datetime import datetime, timezone
 
 from app.extensions import db
-from app.models import Comment, CommentEdit, CommentTemplate, Contact, ReportingUnit, Survey, User
+from app.models import (
+    Comment,
+    CommentEdit,
+    CommentTemplate,
+    Contact,
+    ReportingUnit,
+    Survey,
+    User,
+)
 
 
 def test_system_config_menu_includes_bulk_upload_for_admin(client, login_admin):
@@ -73,7 +81,9 @@ def test_admin_can_add_available_template(client, login_admin, app):
     assert b"Template added." in response.data
 
     with app.app_context():
-        template = CommentTemplate.query.filter_by(wording="New standard wording").first()
+        template = CommentTemplate.query.filter_by(
+            wording="New standard wording"
+        ).first()
         assert template is not None
         assert template.is_active is True
 
@@ -130,7 +140,9 @@ def test_admin_can_move_template_up(client, login_admin, app):
 def test_add_comment_template_popup_respects_configured_order(client, login_admin, app):
     with app.app_context():
         first = CommentTemplate(wording="Order First", is_active=True, display_order=1)
-        second = CommentTemplate(wording="Order Second", is_active=True, display_order=2)
+        second = CommentTemplate(
+            wording="Order Second", is_active=True, display_order=2
+        )
         db.session.add_all([first, second])
         db.session.commit()
 
@@ -150,7 +162,9 @@ def test_add_comment_template_popup_respects_configured_order(client, login_admi
     assert page.find("Order Second") < page.find("Order First")
 
 
-def test_add_comment_page_shows_template_popup_trigger_for_all_users(client, login_analyst):
+def test_add_comment_page_shows_template_popup_trigger_for_all_users(
+    client, login_analyst
+):
     response = client.get("/comments?tab=add", follow_redirects=True)
     assert response.status_code == 200
     assert b"Insert from template" in response.data
@@ -218,6 +232,52 @@ def test_bulk_upload_comments_imports_general_rows_with_is_general_flag(
         assert len(comments) == 1
         assert comments[0].is_general is True
         assert comments[0].survey_code is None
+
+
+def test_bulk_upload_comments_accepts_ni_number_for_ashe(client, login_admin, app):
+    csv_text = "\n".join(
+        [
+            "ruref,survey_code,period,comment_text,author_name",
+            "ab123414c,141,202604,ASHE bulk comment,Analyst Bulk",
+        ]
+    )
+
+    response = client.post(
+        "/admin/system-config/bulk-upload-comments",
+        data={"comments_file": (io.BytesIO(csv_text.encode("utf-8")), "upload.csv")},
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Bulk upload complete. Added 1 comments in " in response.data
+
+    with app.app_context():
+        comment = Comment.query.filter_by(survey_code="141").first()
+        assert comment is not None
+        assert comment.ruref == "AB123414C"
+
+
+def test_bulk_upload_comments_rejects_general_ashe_ni_row(client, login_admin, app):
+    csv_text = "\n".join(
+        [
+            "ruref,survey_code,period,comment_text,is_general,author_name",
+            "AB123414C,141,202604,Invalid ASHE general row,1,Analyst Bulk",
+        ]
+    )
+
+    response = client.post(
+        "/admin/system-config/bulk-upload-comments",
+        data={"comments_file": (io.BytesIO(csv_text.encode("utf-8")), "upload.csv")},
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Skipped: 1." in response.data
+
+    with app.app_context():
+        assert Comment.query.filter_by(ruref="AB123414C").count() == 0
 
 
 def test_bulk_upload_comments_treats_blank_survey_as_general_comment(

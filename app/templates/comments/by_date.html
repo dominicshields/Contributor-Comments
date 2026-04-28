@@ -4,7 +4,7 @@
 {% block content %}
 <header class="ons-page-header">
     <h1 class="ons-page-title">Comments by Date</h1>
-    <p class="ons-page-lead">Comments grouped by created year and month, then by RUREF and survey.</p>
+    <p class="ons-page-lead">Comments grouped by created year and month, then by reference and survey.</p>
 </header>
 
 <div class="mb-3 ons-month-index">
@@ -68,7 +68,7 @@
                 {% for ruref, survey_groups in selected_month_groups.items() %}
                     <tr>
                         <th colspan="5" scope="colgroup">
-                            <a href="{{ url_for('comments.ruref_detail', ruref=ruref) }}">RUREF {{ ruref }}</a>
+                            <a href="{{ url_for('comments.ruref_detail', ruref=ruref) }}">{{ reference_label_for_value(ruref) }} {{ ruref }}</a>
                         </th>
                     </tr>
                     {% for survey_label, survey_comments in survey_groups.items() %}

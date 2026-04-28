@@ -14,12 +14,22 @@ from flask_login import current_user, login_required
 from sqlalchemy import case, distinct
 
 from ..extensions import db
-from ..models import Comment, CommentEdit, CommentTemplate, Contact, ReportingUnit, Survey, User
+from ..models import (
+    Comment,
+    CommentEdit,
+    CommentTemplate,
+    Contact,
+    ReportingUnit,
+    Survey,
+    User,
+)
 from ..validation import (
     ALLOWED_SURVEY_PERIODICITIES,
+    ASHE_SURVEY_CODE,
     is_valid_period,
-    is_valid_ruref,
+    is_valid_reference_for_survey,
     is_valid_survey_periodicity,
+    normalize_reference,
 )
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -460,7 +470,7 @@ def bulk_upload_comments_submit():
             str(k).strip().lower(): (v or "").strip() for k, v in row.items()
         }
 
-        ruref = row_normalized.get("ruref", "")
+        ruref = normalize_reference(row_normalized.get("ruref", ""))
         survey_code = row_normalized.get("survey_code", "")
         period = row_normalized.get("period", "")
         comment_text = row_normalized.get("comment_text", "")
@@ -476,7 +486,7 @@ def bulk_upload_comments_submit():
         if survey_code == "":
             is_general = True
 
-        if not is_valid_ruref(ruref) or not comment_text:
+        if not comment_text:
             skipped += 1
             continue
 
@@ -494,6 +504,16 @@ def bulk_upload_comments_submit():
             if not _is_period_allowed_for_survey(survey, period):
                 skipped += 1
                 continue
+
+        if not is_valid_reference_for_survey(
+            ruref, survey_code if not is_general else None
+        ):
+            skipped += 1
+            continue
+
+        if is_general and survey_code == ASHE_SURVEY_CODE:
+            skipped += 1
+            continue
 
         reporting_unit = db.session.get(ReportingUnit, ruref)
         if reporting_unit is None:
@@ -674,7 +694,9 @@ def add_template():
         flash("Template wording is required.", "error")
         return redirect(url_for("admin.templates_page"))
 
-    max_order = db.session.query(db.func.max(CommentTemplate.display_order)).scalar() or 0
+    max_order = (
+        db.session.query(db.func.max(CommentTemplate.display_order)).scalar() or 0
+    )
     db.session.add(
         CommentTemplate(
             wording=wording,

@@ -60,3 +60,21 @@
 2026-04-24 08:52:35.526 BST [11872] LOG:  database system is ready to accept connections
 2026-04-24 08:57:35.515 BST [11876] LOG:  checkpoint starting: time
 2026-04-24 08:57:35.542 BST [11876] LOG:  checkpoint complete: wrote 0 buffers (0.0%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.004 s, sync=0.006 s, total=0.028 s; sync files=2, longest=0.004 s, average=0.003 s; distance=0 kB, estimate=0 kB; lsn=0/572DEE8, redo lsn=0/572DE90
+2026-04-27 21:05:23.555 BST [15088] LOG:  starting PostgreSQL 18.3 on aarch64-apple-darwin20.0.0, compiled by clang version 20.1.8, 64-bit
+2026-04-27 21:05:23.557 BST [15088] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-04-27 21:05:23.557 BST [15088] LOG:  listening on IPv6 address "::1", port 5432
+2026-04-27 21:05:23.557 BST [15088] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2026-04-27 21:05:23.582 BST [15094] LOG:  database system was shut down at 2026-04-24 11:55:26 BST
+2026-04-27 21:05:23.597 BST [15088] LOG:  database system is ready to accept connections
+2026-04-27 21:10:23.582 BST [15092] LOG:  checkpoint starting: time
+2026-04-27 21:10:23.623 BST [15092] LOG:  checkpoint complete: wrote 0 buffers (0.0%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.013 s, sync=0.004 s, total=0.041 s; sync files=2, longest=0.003 s, average=0.002 s; distance=0 kB, estimate=0 kB; lsn=0/572E0B8, redo lsn=0/572E060
+2026-04-27 21:20:23.510 BST [15092] LOG:  checkpoint starting: time
+2026-04-27 21:22:02.923 BST [15092] LOG:  checkpoint complete: wrote 979 buffers (6.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=99.348 s, sync=0.037 s, total=99.414 s; sync files=319, longest=0.002 s, average=0.001 s; distance=4517 kB, estimate=4517 kB; lsn=0/60C8610, redo lsn=0/5B97530
+2026-04-27 21:23:28.004 BST [15088] LOG:  received smart shutdown request
+2026-04-27 21:23:28.005 BST [15088] LOG:  background worker "logical replication launcher" (PID 15097) exited with exit code 1
+2026-04-27 21:23:28.006 BST [15092] LOG:  shutting down
+2026-04-27 21:23:28.006 BST [15092] LOG:  checkpoint starting: shutdown immediate
+2026-04-27 21:23:28.042 BST [15092] LOG:  checkpoint complete: wrote 387 buffers (2.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 1 recycled; write=0.031 s, sync=0.003 s, total=0.037 s; sync files=13, longest=0.001 s, average=0.001 s; distance=5316 kB, estimate=5316 kB; lsn=0/60C86C0, redo lsn=0/60C86C0
+2026-04-27 21:23:28.056 BST [15088] LOG:  database system is shut down
+2026-04-28 09:33:11.367 BST [27631] FATAL:  lock file "postmaster.pid" already exists
+2026-04-28 09:33:11.367 BST [27631] HINT:  Is another postmaster (PID 24828) running in data directory "/Users/dominic.shields@ons.gov.uk/postgres-data"?

@@ -54,7 +54,7 @@ class User(UserMixin, db.Model):
 class ReportingUnit(db.Model):
     __tablename__ = "reporting_units"
 
-    ruref: Mapped[str] = mapped_column(String(11), primary_key=True)
+    ruref: Mapped[str] = mapped_column(String(20), primary_key=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
@@ -103,7 +103,7 @@ class Comment(db.Model):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     ruref: Mapped[str] = mapped_column(
-        String(11), ForeignKey("reporting_units.ruref"), nullable=False, index=True
+        String(20), ForeignKey("reporting_units.ruref"), nullable=False, index=True
     )
     survey_code: Mapped[Optional[str]] = mapped_column(
         String(3), ForeignKey("surveys.code"), nullable=True, index=True
@@ -146,7 +146,6 @@ class Comment(db.Model):
 
     __table_args__ = (
         CheckConstraint("length(period) = 6", name="ck_comments_period_len"),
-        CheckConstraint("length(ruref) = 11", name="ck_comments_ruref_len"),
     )
 
 
@@ -181,7 +180,7 @@ class Contact(db.Model):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     ruref: Mapped[str] = mapped_column(
-        String(11), ForeignKey("reporting_units.ruref"), nullable=False, index=True
+        String(20), ForeignKey("reporting_units.ruref"), nullable=False, index=True
     )
     survey_code: Mapped[Optional[str]] = mapped_column(
         String(3), ForeignKey("surveys.code"), nullable=True, index=True
@@ -209,7 +208,6 @@ class Contact(db.Model):
     survey: Mapped[Optional[Survey]] = relationship("Survey", back_populates="contacts")
 
     __table_args__ = (
-        CheckConstraint("length(ruref) = 11", name="ck_contacts_ruref_len"),
         UniqueConstraint("ruref", "survey_code", name="uq_contacts_ruref_survey"),
     )
 

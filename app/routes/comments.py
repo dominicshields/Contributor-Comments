@@ -9,8 +9,25 @@ from flask_login import current_user, login_required
 from sqlalchemy import distinct, or_
 
 from ..extensions import db
-from ..models import Comment, CommentEdit, CommentTemplate, Contact, ReportingUnit, SiteContent, Survey, User
-from ..validation import is_period_allowed_for_survey, is_valid_period, is_valid_ruref
+from ..models import (
+    Comment,
+    CommentEdit,
+    CommentTemplate,
+    Contact,
+    ReportingUnit,
+    SiteContent,
+    Survey,
+    User,
+)
+from ..validation import (
+    ASHE_SURVEY_CODE,
+    is_period_allowed_for_survey,
+    is_valid_ni_number,
+    is_valid_period,
+    is_valid_reference,
+    is_valid_reference_for_survey,
+    normalize_reference,
+)
 
 bp = Blueprint("comments", __name__)
 GENERAL_GROUP_KEY = "General"
@@ -18,21 +35,22 @@ HELP_CONTENT_KEY = "help_page"
 DEFAULT_HELP_CONTENT = """Search and Add
 
 Search tab: Use one or more filters and select Run Search.
-- RUREF: exact 11-digit reporting unit reference.
-- Full Text Search: searches comment text, RUREF, period, survey code, and author.
+- Reference: exact 11-digit RUREF or a valid NI Number for ASHE.
+- Full Text Search: searches comment text, reference, period, survey code, and author.
 - Surveys: limit to selected survey codes.
-- Show Comments (Testing): shows the lowest 10 RUREFs with comments, grouped by survey.
+- Show Comments (Testing): shows the lowest 10 references with comments, grouped by survey.
 
-Add Comment tab: Enter RUREF, Survey, Period, and Comment, then select Save Comment.
-- RUREF must be exactly 11 numeric characters.
+Add Comment tab: Enter Reference, Survey, Period, and Comment, then select Save Comment.
+- Non-ASHE references must be exactly 11 numeric characters.
+- Survey 141 requires an NI Number in the format two letters, six digits ending 14, and one suffix letter.
 - Period must be valid YYYYMM.
 - Period month must match survey periodicity rules.
 
 Comments Views
 
 Use the top navigation Comments menu for grouped views.
-- Comments by Author: filter by author name/username, grouped by author with counts, ordered by RUREF then survey, with Collapse all / Expand all controls.
-- Comments by Date: starts as a collapsed year/month index with counts for all years; selecting a month opens month-specific results grouped by RUREF then survey, with pagination after month selection (50 comments per page).
+- Comments by Author: filter by author name/username, grouped by author with counts, ordered by reference then survey, with Collapse all / Expand all controls.
+- Comments by Date: starts as a collapsed year/month index with counts for all years; selecting a month opens month-specific results grouped by reference then survey, with pagination after month selection (50 comments per page).
 
 Survey Metadata
 
@@ -55,10 +73,40 @@ Optional columns: survey_code, is_general, author_name, saved_at, contact_name, 
 
 Troubleshooting
 
-- If no results appear, check RUREF format and selected survey filters.
+- If no results appear, check reference format and selected survey filters.
 - If Add Comment fails, check period format and survey periodicity month rules.
 - If access is denied to System Config pages, your user may not have admin rights.
 """
+
+
+def _reference_from_source(source, key: str = "ruref") -> str:
+    return normalize_reference(
+        (source.get(key) or source.get("reference") or "").strip()
+    )
+
+
+def _reference_label_for_value(
+    reference_value: Optional[str],
+    survey_code: Optional[str] = None,
+    is_general: bool = False,
+) -> str:
+    if not is_general and survey_code == ASHE_SURVEY_CODE:
+        return "NI Number"
+    if reference_value and is_valid_ni_number(reference_value):
+        return "NI Number"
+    return "RUREF"
+
+
+def _search_reference_label(selected_surveys: list[str]) -> str:
+    if len(selected_surveys) == 1 and selected_surveys[0] == ASHE_SURVEY_CODE:
+        return "NI Number"
+    return "Reference"
+
+
+def _reference_validation_message(survey_code: Optional[str], is_general: bool) -> str:
+    if not is_general and survey_code == ASHE_SURVEY_CODE:
+        return 'NI Number must be two letters, six digits ending in "14", and one suffix letter.'
+    return "Reference must be exactly 11 numeric characters for this survey."
 
 
 def _query_flag(name: str, default: bool = False) -> bool:
@@ -82,7 +130,7 @@ def _add_comment_form_state(source) -> dict[str, str]:
     is_general = source.get("is_general") == "1"
     return {
         "tab": "add",
-        "add_ruref": source.get("ruref", "").strip(),
+        "add_ruref": _reference_from_source(source),
         "add_survey": "" if is_general else source.get("survey", "").strip(),
         "add_period": source.get("period", "").strip(),
         "add_comment": source.get("comment", "").strip(),
@@ -96,7 +144,7 @@ def _add_comment_form_state(source) -> dict[str, str]:
 def _add_comment_return_state(source) -> dict[str, str]:
     return {
         "tab": "add",
-        "add_ruref": source.get("add_ruref", "").strip(),
+        "add_ruref": normalize_reference(source.get("add_ruref", "").strip()),
         "add_survey": source.get("add_survey", "").strip(),
         "add_period": source.get("add_period", "").strip(),
         "add_comment": source.get("add_comment", "").strip(),
@@ -313,13 +361,15 @@ def _load_lowest_ruref_comment_groups(
 @bp.get("/comments")
 @login_required
 def index():
-    ruref = request.args.get("ruref", "").strip()
+    ruref = normalize_reference(
+        (request.args.get("ruref") or request.args.get("reference") or "").strip()
+    )
     query_text = request.args.get("q", "").strip()
     selected_surveys = request.args.getlist("surveys")
     show_comments = _query_flag("show_comments", default=False)
     show_contacts = _query_flag("show_contacts", default=False)
     add_tab_active = request.args.get("tab") == "add"
-    add_ruref = request.args.get("add_ruref", "").strip()
+    add_ruref = normalize_reference(request.args.get("add_ruref", "").strip())
     add_survey = request.args.get("add_survey", "").strip()
     add_period = request.args.get("add_period", "").strip()
     add_comment = request.args.get("add_comment", "").strip()
@@ -354,10 +404,13 @@ def index():
         comment_query = Comment.query
 
         if ruref:
-            if is_valid_ruref(ruref):
+            if is_valid_reference(ruref):
                 comment_query = comment_query.filter(Comment.ruref == ruref)
             else:
-                flash("RUREF must be exactly 11 numeric characters.", "error")
+                flash(
+                    "Reference must be an 11-digit RUREF or a valid NI Number.",
+                    "error",
+                )
                 comment_query = comment_query.filter(False)
 
         if selected_surveys:
@@ -412,9 +465,11 @@ def index():
             reporting_units_with_comments
         ),
         total_comments=_format_count_for_display(total_comments),
+        reference_label_for_value=_reference_label_for_value,
         surveys=surveys,
         selected_surveys=selected_surveys,
         ruref=ruref,
+        search_reference_label=_search_reference_label(selected_surveys),
         q=query_text,
         add_tab_active=add_tab_active,
         add_ruref=add_ruref,
@@ -535,6 +590,7 @@ def comments_by_author():
         author_filter=author_filter,
         comments_by_author=comments_by_author,
         counts_by_author=counts_by_author,
+        reference_label_for_value=_reference_label_for_value,
         pagination=pagination,
     )
 
@@ -630,6 +686,7 @@ def comments_by_date():
         year_counts=year_counts,
         month_counts=month_counts,
         month_names=month_names,
+        reference_label_for_value=_reference_label_for_value,
         selected_year=selected_year if selected_month_valid else None,
         selected_month=selected_month if selected_month_valid else None,
         selected_month_groups=selected_month_groups,
@@ -647,18 +704,40 @@ def contact_management():
             "info",
         )
 
-    ruref = request.args.get("ruref", "").strip()
+    ruref = normalize_reference(
+        (request.args.get("ruref") or request.args.get("reference") or "").strip()
+    )
+    contact_query = request.args.get("contact_query", "").strip()
     show_all_contacts = _query_flag("show_all_contacts", default=False)
-    search_performed = show_all_contacts or bool(ruref)
+    search_performed = show_all_contacts or bool(ruref or contact_query)
 
     contacts: list[Contact] = []
     if show_all_contacts:
         contacts = Contact.query.all()
-    elif ruref:
-        if is_valid_ruref(ruref):
-            contacts = Contact.query.filter_by(ruref=ruref).all()
-        else:
-            flash("RUREF must be exactly 11 numeric characters.", "error")
+    else:
+        contact_query_builder = Contact.query
+
+        if ruref:
+            if is_valid_reference(ruref):
+                contact_query_builder = contact_query_builder.filter(Contact.ruref == ruref)
+            else:
+                flash(
+                    "Reference must be an 11-digit RUREF or a valid NI Number.",
+                    "error",
+                )
+                contact_query_builder = contact_query_builder.filter(False)
+
+        if contact_query:
+            like_pattern = f"%{contact_query}%"
+            contact_query_builder = contact_query_builder.filter(
+                or_(
+                    Contact.name.ilike(like_pattern),
+                    Contact.email_address.ilike(like_pattern),
+                )
+            )
+
+        if search_performed:
+            contacts = contact_query_builder.all()
 
     grouped_contacts: OrderedDict[str, list[Contact]] = OrderedDict()
     for contact in _sort_contacts_for_display(contacts):
@@ -667,16 +746,18 @@ def contact_management():
     return render_template(
         "comments/contact_management.html",
         ruref=ruref,
+        contact_query=contact_query,
         show_all_contacts=show_all_contacts,
         search_performed=search_performed,
         grouped_contacts=grouped_contacts,
+        reference_label_for_value=_reference_label_for_value,
     )
 
 
 @bp.post("/comments/new")
 @login_required
 def create_comment():
-    ruref = request.form.get("ruref", "").strip()
+    ruref = _reference_from_source(request.form)
     survey_code = request.form.get("survey", "").strip()
     period = request.form.get("period", "").strip()
     comment_text = request.form.get("comment", "").strip()
@@ -686,12 +767,6 @@ def create_comment():
     contact_email = request.form.get("contact_email", "").strip()
 
     valid = True
-
-    if not is_valid_ruref(ruref):
-        flash(
-            "Reporting Unit Reference must be exactly 11 numeric characters.", "error"
-        )
-        valid = False
 
     if not is_valid_period(period):
         flash("Period must be in YYYYMM format and represent a valid month.", "error")
@@ -709,6 +784,20 @@ def create_comment():
             flash("Period month must match the selected survey periodicity.", "error")
             valid = False
         contact_survey_code = survey_code
+    elif is_valid_ni_number(ruref):
+        flash("NI Numbers can only be used for survey 141 comments.", "error")
+        valid = False
+
+    if not is_valid_reference_for_survey(
+        ruref, survey_code if not is_general else None
+    ):
+        flash(
+            _reference_validation_message(
+                survey_code if not is_general else None, is_general
+            ),
+            "error",
+        )
+        valid = False
 
     if not comment_text:
         flash("Comment cannot be empty.", "error")
@@ -739,7 +828,9 @@ def create_comment():
                 contact_to_update = existing_contact
 
     if not valid:
-        return redirect(url_for("comments.index", ruref=ruref))
+        return redirect(
+            url_for("comments.index", **_add_comment_form_state(request.form))
+        )
 
     reporting_unit = db.session.get(ReportingUnit, ruref)
     if reporting_unit is None:
@@ -808,14 +899,19 @@ def create_comment():
 @bp.post("/comments/check-contact")
 @login_required
 def check_contact():
-    ruref = request.form.get("ruref", "").strip()
+    ruref = _reference_from_source(request.form)
     survey_code = request.form.get("survey", "").strip()
     is_general = request.form.get("is_general") == "1"
     redirect_params = _add_comment_form_state(request.form)
 
-    if not is_valid_ruref(ruref):
+    if not is_valid_reference_for_survey(
+        ruref, survey_code if not is_general else None
+    ):
         flash(
-            "Reporting Unit Reference must be exactly 11 numeric characters.", "error"
+            _reference_validation_message(
+                survey_code if not is_general else None, is_general
+            ),
+            "error",
         )
         return redirect(url_for("comments.index", **redirect_params))
 
@@ -857,11 +953,15 @@ def check_contact():
 @bp.get("/comments/contact-prefill")
 @login_required
 def contact_prefill():
-    ruref = request.args.get("ruref", "").strip()
+    ruref = normalize_reference(
+        (request.args.get("ruref") or request.args.get("reference") or "").strip()
+    )
     survey_code = request.args.get("survey", "").strip()
     is_general = request.args.get("is_general") == "1"
 
-    if not is_valid_ruref(ruref):
+    if not is_valid_reference_for_survey(
+        ruref, survey_code if not is_general else None
+    ):
         return jsonify({"found": False})
 
     contact_survey_code: Optional[str] = None
@@ -903,8 +1003,9 @@ def update_comment_spellcheck_preference():
 @bp.get("/ruref/<ruref>")
 @login_required
 def ruref_detail(ruref: str):
-    if not is_valid_ruref(ruref):
-        flash("RUREF must be exactly 11 numeric characters.", "error")
+    ruref = normalize_reference(ruref)
+    if not is_valid_reference(ruref):
+        flash("Reference must be an 11-digit RUREF or a valid NI Number.", "error")
         return redirect(url_for("comments.index"))
 
     selected_surveys = request.args.getlist("surveys")
@@ -937,6 +1038,7 @@ def ruref_detail(ruref: str):
     return render_template(
         "comments/ruref_detail.html",
         ruref=ruref,
+        detail_reference_label=_reference_label_for_value(ruref),
         grouped_comments=grouped_comments,
         contacts_by_survey=contacts_by_survey,
         show_contacts=show_contacts,

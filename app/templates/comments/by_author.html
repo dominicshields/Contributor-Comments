@@ -4,7 +4,7 @@
 {% block content %}
 <header class="ons-page-header">
     <h1 class="ons-page-title">Comments by Author</h1>
-    <p class="ons-page-lead">Comments grouped by author, then ordered by RUREF and survey.</p>
+    <p class="ons-page-lead">Comments grouped by author, then ordered by reference and survey.</p>
 </header>
 
 <div class="mb-4">
@@ -46,7 +46,7 @@
                     </colgroup>
                     <thead>
                         <tr>
-                            <th>RUREF</th>
+                            <th>Reference</th>
                             <th>Survey</th>
                             <th>Period</th>
                             <th>Comment</th>
@@ -55,7 +55,7 @@
                     <tbody>
                     {% for comment in author_comments %}
                         <tr>
-                            <td class="meta-col"><a href="{{ url_for('comments.ruref_detail', ruref=comment.ruref) }}">{{ comment.ruref }}</a></td>
+                            <td class="meta-col"><a href="{{ url_for('comments.ruref_detail', ruref=comment.ruref) }}">{{ reference_label_for_value(comment.ruref) }} {{ comment.ruref }}</a></td>
                             <td class="meta-col">{% if comment.is_general %}General{% else %}{{ comment.survey_code }}{% endif %}</td>
                             <td class="meta-col">{{ comment.period }}</td>
                             <td class="comment-col">{{ comment.comment_text }}</td>

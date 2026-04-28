@@ -4,15 +4,19 @@
 {% block content %}
 <header class="ons-page-header">
     <h1 class="ons-page-title">Contact Management</h1>
-    <p class="ons-page-lead">Search contacts by RUREF or show all contacts. Contacts are ordered by survey within each RUREF.</p>
+    <p class="ons-page-lead">Search contacts by reference, name, or email, or show all contacts. Contacts are ordered by survey within each reference.</p>
 </header>
 
 <div class="mb-4">
     <h2 class="ons-section-title">Search Contacts</h2>
     <form class="row g-3" method="get" action="{{ url_for('comments.contact_management') }}">
         <div class="col-md-4">
-            <label class="form-label" for="ruref">RUREF (11 digits)</label>
-            <input class="form-control" type="text" id="ruref" name="ruref" value="{{ ruref }}" maxlength="11">
+            <label class="form-label" for="ruref">Reference</label>
+            <input class="form-control" type="text" id="ruref" name="ruref" value="{{ ruref }}" maxlength="20">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label" for="contact_query">Contact Name or Email</label>
+            <input class="form-control" type="text" id="contact_query" name="contact_query" value="{{ contact_query }}" maxlength="255">
         </div>
         <div class="col-12">
             <button class="btn btn-primary" type="submit">Run Search</button>
@@ -29,7 +33,7 @@
         {% for result_ruref, contacts in grouped_contacts.items() %}
         <section class="ons-results-group">
             <h3 class="ons-results-heading">
-                <a href="{{ url_for('comments.ruref_detail', ruref=result_ruref) }}">RUREF {{ result_ruref }}</a>
+                <a href="{{ url_for('comments.ruref_detail', ruref=result_ruref) }}">{{ reference_label_for_value(result_ruref) }} {{ result_ruref }}</a>
             </h3>
             {% for contact in contacts %}
             <article class="comment-card">

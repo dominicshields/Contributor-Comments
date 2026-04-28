@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}RUREF {{ ruref }} | Contributor Comments{% endblock %}
+{% block title %}{{ detail_reference_label }} {{ ruref }} | Contributor Comments{% endblock %}
 
 {% block extra_css %}
     {{ super() }}
@@ -14,12 +14,12 @@
 
 {% block content %}
 <header class="ons-page-header">
-    <h1 class="ons-page-title">Reporting Unit Reference {{ ruref }}</h1>
+    <h1 class="ons-page-title">{{ detail_reference_label }} {{ ruref }}</h1>
     <p class="ons-page-lead">Comments grouped by survey in survey order, with period descending.</p>
 </header>
 
 <div class="mb-4">
-    <h2 class="ons-section-title">Filter This RUREF</h2>
+    <h2 class="ons-section-title">Filter This {{ detail_reference_label }}</h2>
     <form class="row g-3" method="get" action="{{ url_for('comments.ruref_detail', ruref=ruref) }}">
         <div class="col-md-7">
             <label class="form-label" for="q">Full Text Search</label>
@@ -117,7 +117,7 @@
     </div>
 {% else %}
     <div class="ons-content-section">
-        <p class="mb-0">No comments found for this RUREF and filters.</p>
+        <p class="mb-0">No comments found for this {{ detail_reference_label }} and filters.</p>
     </div>
 {% endif %}
 {% endblock %}

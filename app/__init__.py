@@ -16,6 +16,7 @@ from markupsafe import Markup, escape
 from .extensions import csrf, db, login_manager
 from .models import User
 from .seed import seed_reference_data
+from .validation import ASHE_SURVEY_CODE, is_valid_ni_number
 
 LOCAL_ENVS = {"dev", "development", "local", "test"}
 
@@ -91,6 +92,20 @@ def create_app() -> Flask:
 
     @app.context_processor
     def inject_design_system_css_url() -> dict[str, str]:
+        def reference_label(
+            value: Optional[str] = None,
+            survey_code: Optional[str] = None,
+            is_general: bool = False,
+            generic: bool = False,
+        ) -> str:
+            if not is_general and survey_code == ASHE_SURVEY_CODE:
+                return "NI Number"
+            if value and is_valid_ni_number(value):
+                return "NI Number"
+            if generic:
+                return "Reference"
+            return "RUREF"
+
         stylesheet_path = (
             Path(app.static_folder) / app.config["DESIGN_SYSTEM_STYLESHEET"]
         )
@@ -108,6 +123,8 @@ def create_app() -> Flask:
                 v=stylesheet_version,
             ),
             "auth_mode": app.config["AUTH_MODE"],
+            "ashe_survey_code": ASHE_SURVEY_CODE,
+            "reference_label": reference_label,
         }
 
     @app.after_request

@@ -22,7 +22,7 @@
 
 <header class="ons-header ons-header--internal" role="banner">
     {% set comments_section_active = request.endpoint in ['comments.comments_by_author', 'comments.comments_by_date'] %}
-    {% set system_config_active = request.endpoint in ['admin.system_info', 'admin.bulk_upload_comments', 'admin.bulk_upload_comments_submit', 'admin.templates_page', 'admin.add_template', 'admin.update_template', 'admin.move_template', 'admin.delete_all_comments_page', 'admin.delete_all_comments_submit'] %}
+    {% set system_config_active = request.endpoint in ['admin.system_info', 'admin.bulk_upload_comments', 'admin.bulk_upload_comments_submit', 'admin.templates_page', 'admin.add_template', 'admin.update_template', 'admin.move_template', 'admin.orphan_contacts_page', 'admin.orphan_contacts_submit', 'admin.delete_all_comments_page', 'admin.delete_all_comments_submit'] %}
 
     <div class="ons-browser-banner">
         <div class="ons-container">
@@ -215,6 +215,7 @@
                 <li><a class="ons-header__sub-nav-link {% if request.endpoint == 'admin.system_info' %}ons-header__sub-nav-link--active{% endif %}" href="{{ url_for('admin.system_info') }}">System Info</a></li>
                 <li><a class="ons-header__sub-nav-link {% if request.endpoint in ['admin.bulk_upload_comments', 'admin.bulk_upload_comments_submit'] %}ons-header__sub-nav-link--active{% endif %}" href="{{ url_for('admin.bulk_upload_comments') }}">Bulk Upload Comments</a></li>
                 <li><a class="ons-header__sub-nav-link {% if request.endpoint in ['admin.templates_page', 'admin.add_template', 'admin.update_template', 'admin.move_template'] %}ons-header__sub-nav-link--active{% endif %}" href="{{ url_for('admin.templates_page') }}">Available Templates</a></li>
+                <li><a class="ons-header__sub-nav-link {% if request.endpoint in ['admin.orphan_contacts_page', 'admin.orphan_contacts_submit'] %}ons-header__sub-nav-link--active{% endif %}" href="{{ url_for('admin.orphan_contacts_page') }}">Cleanup orphan contacts</a></li>
                 <li><a class="ons-header__sub-nav-link {% if request.endpoint in ['admin.delete_all_comments_page', 'admin.delete_all_comments_submit'] %}ons-header__sub-nav-link--active{% endif %}" href="{{ url_for('admin.delete_all_comments_page') }}">Delete all comments and contacts</a></li>
             </ul>
         </div>

@@ -999,6 +999,7 @@ def test_contact_management_search_and_show_all(client, login_analyst, app):
     assert show_all_response.status_code == 200
     assert b"RUREF 12345678901" in show_all_response.data
     assert b"RUREF 12345678902" in show_all_response.data
+    assert b"Show 50 Contacts" in show_all_response.data
 
 
 def test_contact_management_search_by_name_or_email(client, login_analyst, app):
@@ -1072,7 +1073,7 @@ def test_contact_management_search_by_name_or_email(client, login_analyst, app):
     assert b"Alice Example" not in search_by_email_response.data
 
 
-def test_contact_management_removes_orphan_contacts(client, login_analyst, app):
+def test_contact_management_does_not_remove_orphan_contacts(client, login_analyst, app):
     with app.app_context():
         ru = db.session.get(ReportingUnit, "12345678903")
         if ru is None:
@@ -1089,18 +1090,69 @@ def test_contact_management_removes_orphan_contacts(client, login_analyst, app):
         db.session.add(orphan_contact)
         db.session.commit()
 
-    response = client.get(
-        "/contacts-management?show_all_contacts=1", follow_redirects=True
-    )
+    response = client.get("/contacts-management?ruref=12345678903", follow_redirects=True)
     assert response.status_code == 200
-    assert b"Removed 1 orphan contacts with no matching comments." in response.data
-    assert b"Orphan Contact" not in response.data
+    assert b"Removed 1 orphan contacts with no matching comments." not in response.data
+    assert b"Orphan Contact" in response.data
 
     with app.app_context():
         still_exists = Contact.query.filter_by(
             ruref="12345678903", survey_code="221"
         ).first()
-        assert still_exists is None
+        assert still_exists is not None
+
+
+def test_contact_management_show_50_contacts_is_paginated(client, login_analyst, app):
+    with app.app_context():
+        author = User.query.filter_by(username="analyst1").first()
+        assert author is not None
+
+        for index in range(60):
+            ruref = f"300000000{index:02d}"
+            reporting_unit = db.session.get(ReportingUnit, ruref)
+            if reporting_unit is None:
+                reporting_unit = ReportingUnit(ruref=ruref)
+                db.session.add(reporting_unit)
+
+            db.session.add(
+                Comment(
+                    ruref=ruref,
+                    survey_code="221",
+                    period="202601",
+                    comment_text=f"Comment {index}",
+                    author_id=author.id,
+                )
+            )
+            db.session.add(
+                Contact(
+                    ruref=ruref,
+                    survey_code="221",
+                    name=f"Contact {index}",
+                    telephone_number=f"0207{index:06d}",
+                    email_address=f"contact{index}@example.com",
+                )
+            )
+
+        db.session.commit()
+
+    first_page_response = client.get(
+        "/contacts-management?show_all_contacts=1",
+        follow_redirects=True,
+    )
+    assert first_page_response.status_code == 200
+    assert b"Contact 0" in first_page_response.data
+    assert b"Contact 49" in first_page_response.data
+    assert b"Contact 50" not in first_page_response.data
+    assert b"Next" in first_page_response.data
+
+    second_page_response = client.get(
+        "/contacts-management?show_all_contacts=1&page=2",
+        follow_redirects=True,
+    )
+    assert second_page_response.status_code == 200
+    assert b"Contact 50" in second_page_response.data
+    assert b"Contact 59" in second_page_response.data
+    assert b"Contact 0" not in second_page_response.data
 
 
 def test_comments_by_author_requires_login(client):

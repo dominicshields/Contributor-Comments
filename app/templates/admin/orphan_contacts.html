@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Cleanup orphan contacts | Contributor Comments{% endblock %}
+
+{% block content %}
+<header class="ons-page-header">
+    <h1 class="ons-page-title">Cleanup orphan contacts</h1>
+    <p class="ons-page-lead">Admin utility to remove contacts that no longer have any matching comment for the same scope.</p>
+</header>
+
+<div class="ons-panel">
+    <p><strong>Current orphan contacts:</strong> {{ orphan_contact_count }}</p>
+    <p class="mb-3">This removes contact rows with no matching general or survey-specific comment. It does not change valid contacts or any comments.</p>
+
+    <form method="post" action="{{ url_for('admin.orphan_contacts_submit') }}" onsubmit="return confirm('Remove orphan contacts only? This cannot be undone.');">
+        <button class="btn btn-danger" type="submit">Cleanup orphan contacts</button>
+        <a class="btn btn-outline-secondary ms-2" href="{{ url_for('admin.system_info') }}">Cancel</a>
+    </form>
+</div>
+{% endblock %}

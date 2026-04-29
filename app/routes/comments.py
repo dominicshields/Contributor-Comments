@@ -6,7 +6,9 @@ from typing import Optional
 
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from sqlalchemy.orm import joinedload
 from sqlalchemy import distinct, or_
+from sqlalchemy.orm import joinedload
 
 from ..extensions import db
 from ..models import (
@@ -49,7 +51,8 @@ Add Comment tab: Enter Reference, Survey, Period, and Comment, then select Save 
 Comments Views
 
 Use the top navigation Comments menu for grouped views.
-- Comments by Author: filter by author name/username, grouped by author with counts, ordered by reference then survey, with Collapse all / Expand all controls.
+- Comments by Author: filter by author name/username, browse collapsed author headings with counts, then open one author at a time with paginated comments ordered by reference then survey.
+- Comments by Survey: grouped by survey with counts, initially collapsed, ordered by survey metadata then reference.
 - Comments by Date: starts as a collapsed year/month index with counts for all years; selecting a month opens month-specific results grouped by reference then survey, with pagination after month selection (50 comments per page).
 
 Survey Metadata
@@ -544,12 +547,16 @@ def edit_help_page():
 @login_required
 def comments_by_author():
     author_filter = request.args.get("author", "").strip()
+    selected_author_id = request.args.get("author_id", type=int)
     page = request.args.get("page", default=1, type=int)
     per_page = 50
 
-    author_query = db.session.query(User.id, User.full_name, User.username).join(
-        Comment, Comment.author_id == User.id
-    )
+    author_query = db.session.query(
+        User.id,
+        User.full_name,
+        User.username,
+        db.func.count(Comment.id).label("comment_count"),
+    ).join(Comment, Comment.author_id == User.id)
 
     if author_filter:
         like_pattern = f"%{author_filter}%"
@@ -567,19 +574,24 @@ def comments_by_author():
         User.username.asc(),
     )
 
-    pagination = author_query.paginate(page=page, per_page=per_page, error_out=False)
-    page_authors = pagination.items
-    page_author_ids = [author_id for author_id, _, _ in page_authors]
+    author_rows = author_query.all()
+    counts_by_author = {author_id: count for author_id, _, _, count in author_rows}
+    valid_author_ids = {author_id for author_id, _, _, _ in author_rows}
 
-    comments: list[Comment] = []
-    if page_author_ids:
-        comments = (
+    pagination = None
+    selected_author_comments: list[Comment] = []
+    selected_author = None
+    if selected_author_id in valid_author_ids:
+        selected_author = next(
+            (row for row in author_rows if row[0] == selected_author_id),
+            None,
+        )
+        comment_query = (
             Comment.query.join(User, Comment.author_id == User.id)
             .outerjoin(Survey, Comment.survey_code == Survey.code)
-            .filter(Comment.author_id.in_(page_author_ids))
+            .options(joinedload(Comment.author))
+            .filter(Comment.author_id == selected_author_id)
             .order_by(
-                User.full_name.asc(),
-                User.username.asc(),
                 Comment.ruref.asc(),
                 Comment.is_general.desc(),
                 Survey.display_order.asc(),
@@ -587,35 +599,108 @@ def comments_by_author():
                 Comment.period.desc(),
                 Comment.created_at.desc(),
             )
-            .all()
         )
-
-    comments_by_author: OrderedDict[tuple[int, str, str], list[Comment]] = OrderedDict()
-    for comment in comments:
-        author_key = (
-            comment.author.id,
-            comment.author.full_name,
-            comment.author.username,
-        )
-        comments_by_author.setdefault(author_key, []).append(comment)
-
-    counts_by_author = {}
-    if page_author_ids:
-        count_query = (
-            db.session.query(User.id, db.func.count(Comment.id))
-            .join(Comment, Comment.author_id == User.id)
-            .filter(User.id.in_(page_author_ids))
-            .group_by(User.id)
-        )
-        counts_by_author = {author_id: count for author_id, count in count_query.all()}
+        pagination = comment_query.paginate(page=page, per_page=per_page, error_out=False)
+        selected_author_comments = pagination.items
 
     return render_template(
         "comments/by_author.html",
         author_filter=author_filter,
-        comments_by_author=comments_by_author,
+        author_rows=author_rows,
         counts_by_author=counts_by_author,
         reference_label_for_value=_reference_label_for_value,
         pagination=pagination,
+        selected_author=selected_author,
+        selected_author_comments=selected_author_comments,
+    )
+
+
+@bp.get("/comments/by-survey")
+@login_required
+def comments_by_survey():
+    selected_survey = request.args.get("survey", "").strip()
+    page = request.args.get("page", default=1, type=int)
+    per_page = 50
+
+    general_count = (
+        db.session.query(db.func.count(Comment.id))
+        .filter(Comment.is_general.is_(True))
+        .scalar()
+        or 0
+    )
+
+    survey_count_rows = (
+        db.session.query(
+            Comment.survey_code,
+            db.func.count(Comment.id),
+        )
+        .filter(Comment.is_general.is_(False))
+        .group_by(Comment.survey_code)
+        .all()
+    )
+    survey_counts = {survey_code: count for survey_code, count in survey_count_rows}
+
+    counts_by_survey: OrderedDict[str, int] = OrderedDict()
+    ordered_surveys = Survey.query.order_by(Survey.code.asc()).all()
+    known_survey_codes = set()
+    for survey in ordered_surveys:
+        count = survey_counts.get(survey.code)
+        if count:
+            counts_by_survey[survey.code] = count
+            known_survey_codes.add(survey.code)
+
+    unknown_count = survey_counts.get(None, 0)
+    if unknown_count:
+        counts_by_survey["Unknown"] = unknown_count
+
+    remaining_codes = sorted(
+        code
+        for code in survey_counts.keys()
+        if code is not None and code not in known_survey_codes
+    )
+    for code in remaining_codes:
+        counts_by_survey[code] = survey_counts[code]
+
+    if general_count:
+        counts_by_survey[GENERAL_GROUP_KEY] = general_count
+
+    selected_survey_valid = selected_survey in counts_by_survey
+    pagination = None
+    selected_survey_comments: list[Comment] = []
+
+    if selected_survey_valid:
+        survey_query = (
+            Comment.query.options(joinedload(Comment.author))
+            .order_by(
+                Comment.created_at.desc(),
+                Comment.ruref.asc(),
+                Comment.id.desc(),
+            )
+        )
+
+        if selected_survey == GENERAL_GROUP_KEY:
+            survey_query = survey_query.filter(Comment.is_general.is_(True))
+        elif selected_survey == "Unknown":
+            survey_query = survey_query.filter(
+                Comment.is_general.is_(False),
+                Comment.survey_code.is_(None),
+            )
+        else:
+            survey_query = survey_query.filter(
+                Comment.is_general.is_(False),
+                Comment.survey_code == selected_survey,
+            )
+
+        pagination = survey_query.paginate(page=page, per_page=per_page, error_out=False)
+        selected_survey_comments = pagination.items
+
+    return render_template(
+        "comments/by_survey.html",
+        counts_by_survey=counts_by_survey,
+        reference_label_for_value=_reference_label_for_value,
+        pagination=pagination,
+        selected_survey=selected_survey if selected_survey_valid else None,
+        selected_survey_comments=selected_survey_comments,
     )
 
 

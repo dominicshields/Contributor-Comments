@@ -21,7 +21,7 @@
 </div>
 
 <header class="ons-header ons-header--internal" role="banner">
-    {% set comments_section_active = request.endpoint in ['comments.comments_by_author', 'comments.comments_by_date'] %}
+    {% set comments_section_active = request.endpoint in ['comments.comments_by_author', 'comments.comments_by_survey', 'comments.comments_by_date'] %}
     {% set system_config_active = request.endpoint in ['admin.system_info', 'admin.bulk_upload_comments', 'admin.bulk_upload_comments_submit', 'admin.templates_page', 'admin.add_template', 'admin.update_template', 'admin.move_template', 'admin.orphan_contacts_page', 'admin.orphan_contacts_submit', 'admin.delete_all_comments_page', 'admin.delete_all_comments_submit'] %}
 
     <div class="ons-browser-banner">
@@ -179,7 +179,7 @@
                     <a class="ons-header__nav-link {% if request.endpoint == 'comments.index' %}ons-header__nav-link--active{% endif %}" href="{{ url_for('comments.index') }}">Search and Add</a>
                 </li>
                 <li class="ons-header__nav-item">
-                    <a class="ons-header__nav-link {% if comments_section_active %}ons-header__nav-link--active{% endif %}" href="{{ url_for('comments.comments_by_author') }}">Comments</a>
+                    <a class="ons-header__nav-link {% if comments_section_active %}ons-header__nav-link--active{% endif %}" href="{{ url_for('comments.comments_by_survey') }}">Comments</a>
                 </li>
                 <li class="ons-header__nav-item">
                     <a class="ons-header__nav-link {% if request.endpoint == 'comments.contact_management' %}ons-header__nav-link--active{% endif %}" href="{{ url_for('comments.contact_management') }}">Contact Management</a>
@@ -203,6 +203,7 @@
     <nav class="ons-header__sub-nav" aria-label="Comments submenu">
         <div class="ons-container">
             <ul class="ons-header__sub-nav-list">
+                <li><a class="ons-header__sub-nav-link {% if request.endpoint == 'comments.comments_by_survey' %}ons-header__sub-nav-link--active{% endif %}" href="{{ url_for('comments.comments_by_survey') }}">Comments by Survey</a></li>
                 <li><a class="ons-header__sub-nav-link {% if request.endpoint == 'comments.comments_by_author' %}ons-header__sub-nav-link--active{% endif %}" href="{{ url_for('comments.comments_by_author') }}">Comments by Author</a></li>
                 <li><a class="ons-header__sub-nav-link {% if request.endpoint == 'comments.comments_by_date' %}ons-header__sub-nav-link--active{% endif %}" href="{{ url_for('comments.comments_by_date') }}">Comments by Date</a></li>
             </ul>

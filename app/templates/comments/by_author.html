@@ -4,7 +4,7 @@
 {% block content %}
 <header class="ons-page-header">
     <h1 class="ons-page-title">Comments by Author</h1>
-    <p class="ons-page-lead">Comments grouped by author, then ordered by reference and survey.</p>
+    <p class="ons-page-lead">Authors are listed collapsed with counts. Select one author to open paginated comments ordered by reference and survey.</p>
 </header>
 
 <div class="mb-4">
@@ -25,70 +25,89 @@
 
 <div class="ons-content-section">
     <h2 class="ons-section-title">Results</h2>
-    {% if comments_by_author %}
-        {% for author_id, author_name, author_username in comments_by_author.keys() %}
-        {% set author_comments = comments_by_author[(author_id, author_name, author_username)] %}
-        <section class="ons-collapsible-group is-open" data-author-group>
-            <button class="ons-collapsible-group__toggle" type="button" aria-expanded="true">
-                <span class="ons-collapsible-group__title">
-                    <strong>{{ author_name }} ({{ counts_by_author.get(author_id, 0) }})</strong>
+    {% if author_rows %}
+        {% for author_id, author_name, author_username, comment_count in author_rows %}
+        <details data-author-group {% if selected_author and selected_author[0] == author_id %}open{% endif %}>
+            <summary>
+                <a class="text-decoration-none {% if selected_author and selected_author[0] == author_id %}fw-bold{% endif %}" href="{{ url_for('comments.comments_by_author', author=author_filter, author_id=author_id, page=1) }}#selected-author-results">
+                    <strong>{{ author_name }} ({{ comment_count }})</strong>
                     <span class="ons-collapsible-group__meta">{{ author_username }}</span>
-                </span>
-            </button>
-            <div class="ons-collapsible-group__content">
-            <div class="table-responsive">
-                <table class="table table-sm align-middle ons-grouped-table by-author-results-table">
-                    <colgroup>
-                        <col class="col-ruref">
-                        <col class="col-survey">
-                        <col class="col-period">
-                        <col class="col-comment">
-                    </colgroup>
-                    <thead>
-                        <tr>
-                            <th>Reference</th>
-                            <th>Survey</th>
-                            <th>Period</th>
-                            <th>Comment</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {% for comment in author_comments %}
-                        <tr>
-                            <td class="meta-col"><a href="{{ url_for('comments.ruref_detail', ruref=comment.ruref) }}">{{ reference_label_for_value(comment.ruref) }} {{ comment.ruref }}</a></td>
-                            <td class="meta-col">{% if comment.is_general %}General{% else %}{{ comment.survey_code }}{% endif %}</td>
-                            <td class="meta-col">{{ comment.period }}</td>
-                            <td class="comment-col">{{ comment.comment_text }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+                </a>
+            </summary>
+
+            <div class="ons-month-index__months">
+                <div class="ons-month-index__month">
+                    <a class="text-decoration-none" href="{{ url_for('comments.comments_by_author', author=author_filter, author_id=author_id, page=1) }}#selected-author-results">
+                        View comments
+                    </a>
+                </div>
             </div>
-            </div>
-        </section>
+        </details>
         {% endfor %}
     {% else %}
         <p class="mb-0">No comments found for this filter.</p>
     {% endif %}
 </div>
 
-{% if pagination.pages > 1 %}
+{% if selected_author %}
+<div id="selected-author-results" class="ons-content-section mt-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <h2 class="ons-section-title mb-0">{{ selected_author[1] }} ({{ counts_by_author.get(selected_author[0], 0) }})</h2>
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('comments.comments_by_author', author=author_filter) if author_filter else url_for('comments.comments_by_author') }}">Clear author</a>
+    </div>
+
+    {% if selected_author_comments %}
+        <div class="table-responsive">
+            <table class="table table-sm align-middle ons-grouped-table by-author-results-table">
+                <colgroup>
+                    <col class="col-ruref">
+                    <col class="col-survey">
+                    <col class="col-period">
+                    <col class="col-comment">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Reference</th>
+                        <th>Survey</th>
+                        <th>Period</th>
+                        <th>Comment</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for comment in selected_author_comments %}
+                    <tr>
+                        <td class="meta-col"><a href="{{ url_for('comments.ruref_detail', ruref=comment.ruref) }}">{{ reference_label_for_value(comment.ruref, comment.survey_code, comment.is_general) }} {{ comment.ruref }}</a></td>
+                        <td class="meta-col">{% if comment.is_general %}General{% else %}{{ comment.survey_code }}{% endif %}</td>
+                        <td class="meta-col">{{ comment.period }}</td>
+                        <td class="comment-col">{{ comment.comment_text }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="mb-0">No comments found for this author.</p>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if pagination and pagination.pages > 1 %}
 <nav class="mt-3" aria-label="Comments by author pagination">
     <ul class="pagination">
         <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
-            <a class="page-link" href="{{ url_for('comments.comments_by_author', author=author_filter, page=pagination.prev_num) if pagination.has_prev else '#' }}">Previous</a>
+            <a class="page-link" href="{{ (url_for('comments.comments_by_author', author=author_filter, author_id=selected_author[0], page=pagination.prev_num) ~ '#selected-author-results') if pagination.has_prev else '#' }}">Previous</a>
         </li>
         {% for page_number in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
             {% if page_number %}
             <li class="page-item {% if page_number == pagination.page %}active{% endif %}">
-                <a class="page-link" href="{{ url_for('comments.comments_by_author', author=author_filter, page=page_number) }}">{{ page_number }}</a>
+                <a class="page-link" href="{{ url_for('comments.comments_by_author', author=author_filter, author_id=selected_author[0], page=page_number) }}#selected-author-results">{{ page_number }}</a>
             </li>
             {% else %}
             <li class="page-item disabled"><span class="page-link">...</span></li>
             {% endif %}
         {% endfor %}
         <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
-            <a class="page-link" href="{{ url_for('comments.comments_by_author', author=author_filter, page=pagination.next_num) if pagination.has_next else '#' }}">Next</a>
+            <a class="page-link" href="{{ (url_for('comments.comments_by_author', author=author_filter, author_id=selected_author[0], page=pagination.next_num) ~ '#selected-author-results') if pagination.has_next else '#' }}">Next</a>
         </li>
     </ul>
 </nav>
@@ -102,36 +121,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const collapseButton = document.querySelector('[data-collapse-all]');
     const expandButton = document.querySelector('[data-expand-all]');
 
-    function setGroupExpanded(group, expanded) {
-        const toggle = group.querySelector('.ons-collapsible-group__toggle');
-        const content = group.querySelector('.ons-collapsible-group__content');
-
-        group.classList.toggle('is-open', expanded);
-
-        if (toggle) {
-            toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-        }
-
-        if (content) {
-            content.hidden = !expanded;
-        }
-    }
-
-    groups.forEach(function (group) {
-        const toggle = group.querySelector('.ons-collapsible-group__toggle');
-
-        if (toggle) {
-            toggle.addEventListener('click', function () {
-                const expanded = toggle.getAttribute('aria-expanded') !== 'true';
-                setGroupExpanded(group, expanded);
-            });
-        }
-    });
-
     if (collapseButton) {
         collapseButton.addEventListener('click', function () {
             groups.forEach(function (group) {
-                setGroupExpanded(group, false);
+                group.open = false;
             });
         });
     }
@@ -139,7 +132,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (expandButton) {
         expandButton.addEventListener('click', function () {
             groups.forEach(function (group) {
-                setGroupExpanded(group, true);
+                group.open = true;
             });
         });
     }

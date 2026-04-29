@@ -1180,6 +1180,7 @@ def test_comments_by_author_filter_and_ordering(client, login_admin, app):
         analyst2 = User.query.filter_by(username="analyst2").first()
         assert analyst1 is not None
         assert analyst2 is not None
+        analyst1_id = analyst1.id
 
         for ruref in ("12345678001", "12345678002", "12345678003"):
             if db.session.get(ReportingUnit, ruref) is None:
@@ -1220,9 +1221,8 @@ def test_comments_by_author_filter_and_ordering(client, login_admin, app):
     assert b"analyst1" in response_all.data
     assert b"analyst2" in response_all.data
     assert response_all.data.index(b"analyst1") < response_all.data.index(b"analyst2")
-    assert response_all.data.index(b"12345678001") < response_all.data.index(
-        b"12345678003"
-    )
+    assert b"alpha general" not in response_all.data
+    assert b"alpha second" not in response_all.data
 
     response_filtered = client.get(
         "/comments/by-author?author=analyst1", follow_redirects=True
@@ -1231,21 +1231,31 @@ def test_comments_by_author_filter_and_ordering(client, login_admin, app):
     assert b"analyst1" in response_filtered.data
     assert b"analyst2" not in response_filtered.data
 
+    response_selected = client.get(
+        f"/comments/by-author?author_id={analyst1_id}", follow_redirects=True
+    )
+    assert response_selected.status_code == 200
+    assert b'id="selected-author-results"' in response_selected.data
+    assert b"alpha general" in response_selected.data
+    assert b"alpha second" in response_selected.data
+    assert response_selected.data.index(b"12345678001") < response_selected.data.index(
+        b"12345678003"
+    )
+
 
 def test_comments_by_author_pagination_second_page(client, login_admin, app):
     with app.app_context():
-        created_usernames = []
-
+        user = None
         for i in range(55):
-            username = f"paging_user_{i:02d}"
-            user = User(
-                username=username, full_name=f"Paging User {i:02d}", is_admin=False
-            )
-            user.set_password("Password123!")
-            db.session.add(user)
-            db.session.flush()
-
-            created_usernames.append(username.encode())
+            if user is None:
+                user = User(
+                    username="paging_user",
+                    full_name="Paging User",
+                    is_admin=False,
+                )
+                user.set_password("Password123!")
+                db.session.add(user)
+                db.session.flush()
 
             ruref = f"{20000000000 + i:011d}"
             if db.session.get(ReportingUnit, ruref) is None:
@@ -1263,18 +1273,24 @@ def test_comments_by_author_pagination_second_page(client, login_admin, app):
             )
 
         db.session.commit()
+        assert user is not None
+        user_id = user.id
 
-    page_one = client.get("/comments/by-author?page=1", follow_redirects=True)
+    page_one = client.get(
+        f"/comments/by-author?author_id={user_id}&page=1", follow_redirects=True
+    )
     assert page_one.status_code == 200
-    assert created_usernames[0] in page_one.data
-    assert created_usernames[49] in page_one.data
-    assert created_usernames[50] not in page_one.data
+    assert b"paginated author comment 0" in page_one.data
+    assert b"paginated author comment 49" in page_one.data
+    assert b"paginated author comment 50" not in page_one.data
 
-    page_two = client.get("/comments/by-author?page=2", follow_redirects=True)
+    page_two = client.get(
+        f"/comments/by-author?author_id={user_id}&page=2", follow_redirects=True
+    )
     assert page_two.status_code == 200
-    assert created_usernames[50] in page_two.data
-    assert created_usernames[54] in page_two.data
-    assert created_usernames[0] not in page_two.data
+    assert b"paginated author comment 50" in page_two.data
+    assert b"paginated author comment 54" in page_two.data
+    assert b"paginated author comment 0" not in page_two.data
 
 
 def test_comments_by_author_paginates_authors_not_comments(client, login_admin, app):
@@ -1321,7 +1337,8 @@ def test_comments_by_author_paginates_authors_not_comments(client, login_admin, 
     assert response.status_code == 200
     assert b"analyst1" in response.data
     assert b"analyst2" in response.data
-    assert b"second author marker" in response.data
+    assert b"heavy author comment 0" not in response.data
+    assert b"second author marker" not in response.data
 
 
 def test_comments_by_author_invalid_page_defaults_to_first_page(
@@ -1346,14 +1363,219 @@ def test_comments_by_author_invalid_page_defaults_to_first_page(
             )
         )
         db.session.commit()
+        author_id = analyst1.id
 
     response = client.get(
-        "/comments/by-author?page=not-a-number", follow_redirects=True
+        f"/comments/by-author?author_id={author_id}&page=not-a-number",
+        follow_redirects=True,
     )
 
     assert response.status_code == 200
     assert b"invalid page fallback marker" in response.data
 
+
+def test_comments_by_survey_requires_login(client):
+    response = client.get("/comments/by-survey", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"Contributor Comments Sign In" in response.data
+
+
+def test_comments_by_survey_grouping_order_counts_and_collapsed_default(
+    client, login_admin, app
+):
+    with app.app_context():
+        analyst1 = User.query.filter_by(username="analyst1").first()
+        assert analyst1 is not None
+
+        for ruref in ("12345678301", "12345678302", "12345678303"):
+            if db.session.get(ReportingUnit, ruref) is None:
+                db.session.add(ReportingUnit(ruref=ruref))
+
+        db.session.add_all(
+            [
+                Comment(
+                    ruref="12345678302",
+                    survey_code="002",
+                    is_general=False,
+                    period="202604",
+                    comment_text="survey 002 comment",
+                    author_id=analyst1.id,
+                    created_at=datetime(2026, 4, 7, 9, 0, tzinfo=timezone.utc),
+                ),
+                Comment(
+                    ruref="12345678302",
+                    survey_code="241",
+                    is_general=False,
+                    period="202604",
+                    comment_text="survey 241 comment",
+                    author_id=analyst1.id,
+                    created_at=datetime(2026, 4, 10, 9, 0, tzinfo=timezone.utc),
+                ),
+                Comment(
+                    ruref="12345678301",
+                    survey_code=None,
+                    is_general=True,
+                    period="202604",
+                    comment_text="general comment",
+                    author_id=analyst1.id,
+                    created_at=datetime(2026, 4, 11, 9, 0, tzinfo=timezone.utc),
+                ),
+                Comment(
+                    ruref="12345678303",
+                    survey_code="221",
+                    is_general=False,
+                    period="202603",
+                    comment_text="survey 221 older",
+                    author_id=analyst1.id,
+                    created_at=datetime(2026, 4, 8, 9, 0, tzinfo=timezone.utc),
+                ),
+                Comment(
+                    ruref="12345678301",
+                    survey_code="221",
+                    is_general=False,
+                    period="202604",
+                    comment_text="survey 221 newer",
+                    author_id=analyst1.id,
+                    created_at=datetime(2026, 4, 9, 9, 0, tzinfo=timezone.utc),
+                ),
+            ]
+        )
+        db.session.commit()
+
+    response = client.get("/comments/by-survey", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"Comments by Survey" in response.data
+    assert b"Collapse all" in response.data
+    assert b"Expand all" in response.data
+    assert b"General (1)" in response.data
+    assert b"002 (1)" in response.data
+    assert b"221 (2)" in response.data
+    assert b"241 (1)" in response.data
+    assert response.data.index(b"002 (1)") < response.data.index(b"221 (2)")
+    assert response.data.index(b"221 (2)") < response.data.index(b"241 (1)")
+    assert response.data.index(b"241 (1)") < response.data.index(b"General (1)")
+    assert b"<details data-survey-group" in response.data
+    assert b"survey 221 newer" not in response.data
+    assert b"survey 221 older" not in response.data
+    assert (
+        b"/comments/by-survey?survey=221&amp;page=1#selected-survey-results"
+        in response.data
+    )
+
+
+def test_comments_by_survey_open_selected_survey_with_anchor(client, login_admin, app):
+    with app.app_context():
+        analyst1 = User.query.filter_by(username="analyst1").first()
+        assert analyst1 is not None
+
+        for ruref in ("12345678401", "12345678402", "12345678403"):
+            if db.session.get(ReportingUnit, ruref) is None:
+                db.session.add(ReportingUnit(ruref=ruref))
+
+        db.session.add_all(
+            [
+                Comment(
+                    ruref="12345678403",
+                    survey_code="221",
+                    is_general=False,
+                    period="202603",
+                    comment_text="selected survey older",
+                    author_id=analyst1.id,
+                    created_at=datetime(2026, 4, 8, 9, 0, tzinfo=timezone.utc),
+                ),
+                Comment(
+                    ruref="12345678401",
+                    survey_code="221",
+                    is_general=False,
+                    period="202604",
+                    comment_text="selected survey newer",
+                    author_id=analyst1.id,
+                    created_at=datetime(2026, 4, 9, 9, 0, tzinfo=timezone.utc),
+                ),
+                Comment(
+                    ruref="12345678402",
+                    survey_code="241",
+                    is_general=False,
+                    period="202604",
+                    comment_text="other survey comment",
+                    author_id=analyst1.id,
+                    created_at=datetime(2026, 4, 10, 9, 0, tzinfo=timezone.utc),
+                ),
+            ]
+        )
+        db.session.commit()
+
+    response = client.get("/comments/by-survey?survey=221", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b'id="selected-survey-results"' in response.data
+    assert b"Survey 221 (2)" in response.data
+    assert b"selected survey newer" in response.data
+    assert b"selected survey older" in response.data
+    assert b"other survey comment" not in response.data
+    assert response.data.index(b"selected survey newer") < response.data.index(
+        b"selected survey older"
+    )
+    assert (
+        b"/comments/by-survey?survey=221&amp;page=1#selected-survey-results"
+        in response.data
+    )
+
+
+def test_comments_nav_points_to_survey_view(client, login_admin):
+    response = client.get("/comments/by-author", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b'href="/comments/by-survey"' in response.data
+
+
+def test_comments_by_survey_selected_survey_pagination_second_page(
+    client, login_admin, app
+):
+    with app.app_context():
+        analyst1 = User.query.filter_by(username="analyst1").first()
+        assert analyst1 is not None
+
+        for i in range(55):
+            ruref = f"{16600000000 + i:011d}"
+            if db.session.get(ReportingUnit, ruref) is None:
+                db.session.add(ReportingUnit(ruref=ruref))
+
+            db.session.add(
+                Comment(
+                    ruref=ruref,
+                    survey_code="221",
+                    is_general=False,
+                    period="202604",
+                    comment_text=f"survey page marker {i}",
+                    author_id=analyst1.id,
+                    created_at=datetime(2026, 4, 10, 9, 0, tzinfo=timezone.utc),
+                )
+            )
+
+        db.session.commit()
+
+    page_one = client.get("/comments/by-survey?survey=221&page=1", follow_redirects=True)
+    assert page_one.status_code == 200
+    assert b"survey page marker 0" in page_one.data
+    assert b"survey page marker 49" in page_one.data
+    assert b"survey page marker 50" not in page_one.data
+
+    page_two = client.get("/comments/by-survey?survey=221&page=2", follow_redirects=True)
+    assert page_two.status_code == 200
+    assert b"survey page marker 50" in page_two.data
+    assert b"survey page marker 54" in page_two.data
+    assert b"survey page marker 0" not in page_two.data
+    assert (
+        b"/comments/by-survey?survey=221&amp;page=1#selected-survey-results"
+        in page_two.data
+    )
+    assert (
+        b"/comments/by-survey?survey=221&amp;page=2#selected-survey-results"
+        in page_two.data
+    )
 
 def test_comments_by_date_requires_login(client):
     response = client.get("/comments/by-date", follow_redirects=True)

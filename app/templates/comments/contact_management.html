@@ -40,9 +40,9 @@
                 <p class="comment-body mb-1"><strong>{% if contact.survey_code %}Survey {{ contact.survey_code }}{% else %}General{% endif %}</strong></p>
                 <div class="comment-contact-compact">
                     <strong>Contact:</strong>
-                    <span>Name: {{ contact.name or 'Not provided' }}</span>
+                    <span>Name: {{ (contact.name or 'Not provided') | highlight_term(contact_query) }}</span>
                     <span>Telephone: {{ contact.telephone_number or 'Not provided' }}</span>
-                    <span>Email: {{ contact.email_address or 'Not provided' }}</span>
+                    <span>Email: {{ (contact.email_address or 'Not provided') | highlight_term(contact_query) }}</span>
                     <a href="{{ url_for('comments.edit_contact', contact_id=contact.id) }}">Edit contact</a>
                 </div>
             </article>

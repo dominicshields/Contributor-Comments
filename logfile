@@ -78,3 +78,31 @@
 2026-04-27 21:23:28.056 BST [15088] LOG:  database system is shut down
 2026-04-28 09:33:11.367 BST [27631] FATAL:  lock file "postmaster.pid" already exists
 2026-04-28 09:33:11.367 BST [27631] HINT:  Is another postmaster (PID 24828) running in data directory "/Users/dominic.shields@ons.gov.uk/postgres-data"?
+2026-04-29 09:24:21.588 BST [23512] LOG:  starting PostgreSQL 18.3 on aarch64-apple-darwin20.0.0, compiled by clang version 20.1.8, 64-bit
+2026-04-29 09:24:21.589 BST [23512] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-04-29 09:24:21.589 BST [23512] LOG:  listening on IPv6 address "::1", port 5432
+2026-04-29 09:24:21.591 BST [23512] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5432"
+2026-04-29 09:24:21.612 BST [23519] LOG:  database system was shut down at 2026-04-28 15:22:18 BST
+2026-04-29 09:24:21.631 BST [23512] LOG:  database system is ready to accept connections
+2026-04-29 09:29:21.613 BST [23517] LOG:  checkpoint starting: time
+2026-04-29 09:33:51.166 BST [23517] LOG:  checkpoint complete: wrote 6965 buffers (42.5%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 7 recycled; write=269.469 s, sync=0.017 s, total=269.554 s; sync files=106, longest=0.008 s, average=0.001 s; distance=121053 kB, estimate=121053 kB; lsn=0/D7927F8, redo lsn=0/D779160
+2026-04-29 10:04:10.589 BST [44269] FATAL:  lock file "postmaster.pid" already exists
+2026-04-29 10:04:10.589 BST [44269] HINT:  Is another postmaster (PID 23512) running in data directory "/Users/dominic.shields@ons.gov.uk/postgres-data"?
+2026-04-29 10:07:28.593 BST [23517] LOG:  checkpoint starting: time
+2026-04-29 10:07:30.238 BST [23517] LOG:  checkpoint complete: wrote 16 buffers (0.1%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.633 s, sync=0.001 s, total=1.645 s; sync files=4, longest=0.001 s, average=0.001 s; distance=109 kB, estimate=108959 kB; lsn=0/D794710, redo lsn=0/D794680
+2026-04-29 10:12:00.922 BST [48917] FATAL:  lock file "postmaster.pid" already exists
+2026-04-29 10:12:00.922 BST [48917] HINT:  Is another postmaster (PID 23512) running in data directory "/Users/dominic.shields@ons.gov.uk/postgres-data"?
+2026-04-29 10:17:28.220 BST [23517] LOG:  checkpoint starting: time
+2026-04-29 10:20:51.928 BST [23517] LOG:  checkpoint complete: wrote 2015 buffers (12.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 1 recycled; write=203.685 s, sync=0.002 s, total=203.708 s; sync files=37, longest=0.001 s, average=0.001 s; distance=18009 kB, estimate=99864 kB; lsn=0/E937198, redo lsn=0/E92AB10
+2026-04-29 10:22:28.929 BST [23517] LOG:  checkpoint starting: time
+2026-04-29 10:22:35.002 BST [23517] LOG:  checkpoint complete: wrote 60 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=6.066 s, sync=0.002 s, total=6.074 s; sync files=11, longest=0.001 s, average=0.001 s; distance=451 kB, estimate=89922 kB; lsn=0/E99B9A0, redo lsn=0/E99B910
+2026-04-29 11:14:39.967 BST [83807] FATAL:  lock file "postmaster.pid" already exists
+2026-04-29 11:14:39.967 BST [83807] HINT:  Is another postmaster (PID 23512) running in data directory "/Users/dominic.shields@ons.gov.uk/postgres-data"?
+2026-04-29 11:17:28.108 BST [23517] LOG:  checkpoint starting: time
+2026-04-29 11:21:58.072 BST [23517] LOG:  checkpoint complete: wrote 3000 buffers (18.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 2 recycled; write=269.941 s, sync=0.002 s, total=269.965 s; sync files=34, longest=0.001 s, average=0.001 s; distance=23447 kB, estimate=83275 kB; lsn=0/100923E0, redo lsn=0/10081650
+2026-04-29 13:25:45.278 BST [33047] FATAL:  lock file "postmaster.pid" already exists
+2026-04-29 13:25:45.278 BST [33047] HINT:  Is another postmaster (PID 23512) running in data directory "/Users/dominic.shields@ons.gov.uk/postgres-data"?
+2026-04-29 13:29:29.722 BST [23517] LOG:  checkpoint starting: time
+2026-04-29 13:29:32.470 BST [23517] LOG:  checkpoint complete: wrote 27 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.741 s, sync=0.002 s, total=2.749 s; sync files=13, longest=0.001 s, average=0.001 s; distance=144 kB, estimate=74962 kB; lsn=0/100A5978, redo lsn=0/100A58E8
+2026-04-29 13:39:29.476 BST [23517] LOG:  checkpoint starting: time
+2026-04-29 13:39:29.587 BST [23517] LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.103 s, sync=0.001 s, total=0.112 s; sync files=1, longest=0.001 s, average=0.001 s; distance=8 kB, estimate=67466 kB; lsn=0/100A7A50, redo lsn=0/100A79F8

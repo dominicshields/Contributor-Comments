@@ -1061,16 +1061,26 @@ def test_contact_management_search_by_name_or_email(client, login_analyst, app):
         follow_redirects=True,
     )
     assert search_by_name_response.status_code == 200
-    assert b"Alice Example" in search_by_name_response.data
+    assert b"Name: <mark>Alice</mark> Example" in search_by_name_response.data
+    assert b"Email: <mark>alice</mark>@example.com" in search_by_name_response.data
     assert b"Bob Example" not in search_by_name_response.data
+    assert b"RUREF <mark>12345678911</mark>" not in search_by_name_response.data
 
     search_by_email_response = client.get(
         "/contacts-management?contact_query=bob%40example.com",
         follow_redirects=True,
     )
     assert search_by_email_response.status_code == 200
+    assert b"Email: <mark>bob@example.com</mark>" in search_by_email_response.data
     assert b"Bob Example" in search_by_email_response.data
     assert b"Alice Example" not in search_by_email_response.data
+
+    search_by_reference_response = client.get(
+        "/contacts-management?ruref=12345678911",
+        follow_redirects=True,
+    )
+    assert search_by_reference_response.status_code == 200
+    assert b"<mark>12345678911</mark>" not in search_by_reference_response.data
 
 
 def test_contact_management_does_not_remove_orphan_contacts(client, login_analyst, app):
@@ -1090,7 +1100,9 @@ def test_contact_management_does_not_remove_orphan_contacts(client, login_analys
         db.session.add(orphan_contact)
         db.session.commit()
 
-    response = client.get("/contacts-management?ruref=12345678903", follow_redirects=True)
+    response = client.get(
+        "/contacts-management?ruref=12345678903", follow_redirects=True
+    )
     assert response.status_code == 200
     assert b"Removed 1 orphan contacts with no matching comments." not in response.data
     assert b"Orphan Contact" in response.data

@@ -27,21 +27,14 @@
     <h2 class="ons-section-title">Results</h2>
     {% if author_rows %}
         {% for author_id, author_name, author_username, comment_count in author_rows %}
-        <details data-author-group {% if selected_author and selected_author[0] == author_id %}open{% endif %}>
+        {% set author_results_url = url_for('comments.comments_by_author', author=author_filter, author_id=author_id, page=1) ~ '#selected-author-results' %}
+        <details data-author-group data-results-url="{{ author_results_url }}" {% if selected_author and selected_author[0] == author_id %}open{% endif %}>
             <summary>
-                <a class="text-decoration-none {% if selected_author and selected_author[0] == author_id %}fw-bold{% endif %}" href="{{ url_for('comments.comments_by_author', author=author_filter, author_id=author_id, page=1) }}#selected-author-results">
+                <a class="text-decoration-none {% if selected_author and selected_author[0] == author_id %}fw-bold{% endif %}" href="{{ author_results_url }}">
                     <strong>{{ author_name }} ({{ comment_count }})</strong>
                     <span class="ons-collapsible-group__meta">{{ author_username }}</span>
                 </a>
             </summary>
-
-            <div class="ons-month-index__months">
-                <div class="ons-month-index__month">
-                    <a class="text-decoration-none" href="{{ url_for('comments.comments_by_author', author=author_filter, author_id=author_id, page=1) }}#selected-author-results">
-                        View comments
-                    </a>
-                </div>
-            </div>
         </details>
         {% endfor %}
     {% else %}
@@ -120,6 +113,25 @@ document.addEventListener('DOMContentLoaded', function () {
     const groups = Array.from(document.querySelectorAll('[data-author-group]'));
     const collapseButton = document.querySelector('[data-collapse-all]');
     const expandButton = document.querySelector('[data-expand-all]');
+
+    groups.forEach(function (group) {
+        const summary = group.querySelector('summary');
+        const link = summary ? summary.querySelector('a[href]') : null;
+        const targetUrl = group.dataset.resultsUrl || (link ? link.href : '');
+
+        if (!summary || !targetUrl) {
+            return;
+        }
+
+        summary.addEventListener('click', function (event) {
+            if (event.target.closest('a')) {
+                return;
+            }
+
+            event.preventDefault();
+            window.location.assign(targetUrl);
+        });
+    });
 
     if (collapseButton) {
         collapseButton.addEventListener('click', function () {

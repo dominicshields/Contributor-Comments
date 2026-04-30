@@ -18,20 +18,13 @@
 
     {% if counts_by_survey %}
         {% for survey_label, count in counts_by_survey.items() %}
-        <details data-survey-group {% if selected_survey == survey_label %}open{% endif %}>
+        {% set survey_results_url = url_for('comments.comments_by_survey', survey=survey_label, page=1) ~ '#selected-survey-results' %}
+        <details data-survey-group data-results-url="{{ survey_results_url }}" {% if selected_survey == survey_label %}open{% endif %}>
             <summary>
-                <a class="text-decoration-none {% if selected_survey == survey_label %}fw-bold{% endif %}" href="{{ url_for('comments.comments_by_survey', survey=survey_label, page=1) }}#selected-survey-results">
+                <a class="text-decoration-none {% if selected_survey == survey_label %}fw-bold{% endif %}" href="{{ survey_results_url }}">
                     {{ survey_label }} ({{ count }})
                 </a>
             </summary>
-
-            <div class="ons-month-index__months">
-                <div class="ons-month-index__month">
-                    <a class="text-decoration-none" href="{{ url_for('comments.comments_by_survey', survey=survey_label, page=1) }}#selected-survey-results">
-                        View comments
-                    </a>
-                </div>
-            </div>
         </details>
         {% endfor %}
     {% else %}
@@ -113,6 +106,25 @@ document.addEventListener('DOMContentLoaded', function () {
     const groups = Array.from(document.querySelectorAll('[data-survey-group]'));
     const collapseButton = document.querySelector('[data-collapse-all-survey]');
     const expandButton = document.querySelector('[data-expand-all-survey]');
+
+    groups.forEach(function (group) {
+        const summary = group.querySelector('summary');
+        const link = summary ? summary.querySelector('a[href]') : null;
+        const targetUrl = group.dataset.resultsUrl || (link ? link.href : '');
+
+        if (!summary || !targetUrl) {
+            return;
+        }
+
+        summary.addEventListener('click', function (event) {
+            if (event.target.closest('a')) {
+                return;
+            }
+
+            event.preventDefault();
+            window.location.assign(targetUrl);
+        });
+    });
 
     if (collapseButton) {
         collapseButton.addEventListener('click', function () {

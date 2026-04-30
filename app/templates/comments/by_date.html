@@ -24,8 +24,9 @@
 
             <div class="ons-month-index__months">
                 {% for month, count in months.items() %}
+                {% set month_results_url = url_for('comments.comments_by_date', year=year, month=month, page=1) ~ '#selected-month-results' %}
                 <div class="ons-month-index__month">
-                    <a class="text-decoration-none {% if selected_year == year and selected_month == month %}fw-bold{% endif %}" href="{{ url_for('comments.comments_by_date', year=year, month=month, page=1) }}#selected-month-results">
+                    <a class="text-decoration-none {% if selected_year == year and selected_month == month %}fw-bold{% endif %}" href="{{ month_results_url }}">
                         {{ month_names.get(month, month) }} ({{ count }})
                     </a>
                 </div>

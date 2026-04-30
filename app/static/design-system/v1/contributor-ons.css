@@ -39,6 +39,10 @@
     --ons-container-max-width: 1280px;
 }
 
+html {
+    scroll-behavior: auto !important;
+}
+
 /* ONS container (default 1032px max-width) */
 .ons-container {
     max-width: var(--ons-container-max-width);

@@ -106,3 +106,11 @@
 2026-04-29 13:29:32.470 BST [23517] LOG:  checkpoint complete: wrote 27 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.741 s, sync=0.002 s, total=2.749 s; sync files=13, longest=0.001 s, average=0.001 s; distance=144 kB, estimate=74962 kB; lsn=0/100A5978, redo lsn=0/100A58E8
 2026-04-29 13:39:29.476 BST [23517] LOG:  checkpoint starting: time
 2026-04-29 13:39:29.587 BST [23517] LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.103 s, sync=0.001 s, total=0.112 s; sync files=1, longest=0.001 s, average=0.001 s; distance=8 kB, estimate=67466 kB; lsn=0/100A7A50, redo lsn=0/100A79F8
+2026-04-29 15:21:36.395 BST [23512] LOG:  received smart shutdown request
+2026-04-29 15:21:36.401 BST [23512] LOG:  background worker "logical replication launcher" (PID 23522) exited with exit code 1
+2026-04-29 15:21:36.401 BST [23517] LOG:  shutting down
+2026-04-29 15:21:36.402 BST [23517] LOG:  checkpoint starting: shutdown immediate
+2026-04-29 15:21:36.405 BST [23517] LOG:  checkpoint complete: wrote 0 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.002 s, sync=0.001 s, total=0.004 s; sync files=0, longest=0.000 s, average=0.000 s; distance=0 kB, estimate=60720 kB; lsn=0/100A7B00, redo lsn=0/100A7B00
+2026-04-29 15:21:36.428 BST [23512] LOG:  database system is shut down
+2026-04-30 10:19:07.009 BST [54106] FATAL:  lock file "postmaster.pid" already exists
+2026-04-30 10:19:07.009 BST [54106] HINT:  Is another postmaster (PID 25979) running in data directory "/Users/dominic.shields@ons.gov.uk/postgres-data"?
